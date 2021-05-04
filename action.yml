@@ -1,0 +1,17 @@
+name: 'Code coverage'
+description: 'Update or check your code coverage'
+inputs:
+  token:
+    description: 'The github token'
+    required: true
+  coverage-file:
+    description: 'The coverage summary at clover format'
+    required: true
+    default: 'coverage.xml'
+  action:
+    description: 'Do we want to update the base coverage, or to check it has not been degraded?'
+    required: true
+    default: 'update'
+runs:
+  using: 'node12'
+  main: 'dist/index.js'
