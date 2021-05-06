@@ -8,6 +8,10 @@ inputs:
     description: 'The coverage summary at clover format'
     required: true
     default: 'coverage.xml'
+  summary-file:
+    description: 'The summary JSON file to be pushed on the coverage branch'
+    required: true
+    default: 'coverage-summary.json'
   action:
     description: 'Do we want to update the base coverage, or to check it has not been degraded?'
     required: true
