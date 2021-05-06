@@ -96,6 +96,8 @@ const parseCoverage = async () => {
     const covered = parseInt(metrics.attributes.coveredelements, 10);
     const coverage = parseFloat((100 * covered / total).toFixed(3));
 
+    console.log('Metrics gathered from clover file:', metrics.attributes);
+
     return {total, covered, coverage};
 }
 
@@ -156,7 +158,7 @@ const check = async coverage => {
     const baseCoverageResult = await fetchBaseCoverage();
 
     if (baseCoverageResult.status === 404) {
-        console.log(`No base coverage found. Current coverage is ${coverage.coverage}%`);
+        console.log(`No base coverage found. Current coverage is ${coverage.coverage}% (${coverage.total} lines, ${coverage.covered} covered)`);
         return;
     }
 
