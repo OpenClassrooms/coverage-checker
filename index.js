@@ -9,7 +9,7 @@ const convert = require('xml-js');
 
 const ACTION = core.getInput('action');
 const COVERAGE_BRANCH = 'coverage';
-const FILES = JSON.parse(core.getInput('coverage-files'));
+const FILES = core.getInput('coverage-files');
 const TOKEN = core.getInput('token');
 const REPO = `https://${process.env.GITHUB_ACTOR}:${TOKEN}@github.com/${process.env.GITHUB_REPOSITORY}.git`;
 
@@ -230,4 +230,5 @@ const action = async () => {
     }
 };
 
-action();
+//action();
+console.log(typeof FILES);
