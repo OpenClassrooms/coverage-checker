@@ -103,7 +103,9 @@ const parseCoverage = async () => {
 }
 
 const parseCoverages = async () => {
+    console.log(FILES);
     const files = JSON.parse(FILES);
+    console.log(files);
     const reports = {};
 
     for (const file of files) {
@@ -226,8 +228,6 @@ const check = async coverages => {
 const action = async () => {
     try {
         const coverages = await parseCoverages();
-
-        console.log(coverages);
 
         await (ACTION === 'update' ? update(coverages) : check(coverages));
     } catch (error) {
