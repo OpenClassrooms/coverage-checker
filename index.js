@@ -227,6 +227,8 @@ const action = async () => {
     try {
         const coverages = await parseCoverages();
 
+        console.log(coverages);
+
         await (ACTION === 'update' ? update(coverages) : check(coverages));
     } catch (error) {
         core.setFailed(error.message);
