@@ -10696,7 +10696,7 @@ const convert = __nccwpck_require__(2954);
 
 const ACTION = core.getInput('action');
 const COVERAGE_BRANCH = 'coverage';
-const FILES = core.getInput('files');
+const FILES = JSON.parse(core.getInput('coverage-files'));
 const TOKEN = core.getInput('token');
 const REPO = `https://${process.env.GITHUB_ACTOR}:${TOKEN}@github.com/${process.env.GITHUB_REPOSITORY}.git`;
 
@@ -10709,14 +10709,12 @@ const fail = (message) => {
 const execute = (command, options) => new Promise(function (resolve, reject) {
     const cb = (error, stdout, stderr) => {
         if (error) {
-            console.log(command, stderr);
             core.setFailed(error);
             reject(error);
 
             return;
         }
 
-        console.log(command, stdout);
         resolve(stdout.trim());
     };
 
@@ -10919,9 +10917,7 @@ const action = async () => {
     }
 };
 
-//action();
-
-console.log(core.getInput('coverage-files'));
+action();
 
 })();
 
