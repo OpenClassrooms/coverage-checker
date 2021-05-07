@@ -10696,7 +10696,7 @@ const convert = __nccwpck_require__(2954);
 
 const ACTION = core.getInput('action');
 const COVERAGE_BRANCH = 'coverage';
-const COVERAGE_FILES = JSON.parse(core.getInput('coverage-files'));
+const COVERAGE_FILES = JSON.parse(core.getInput('files'));
 const TOKEN = core.getInput('token');
 const REPO = `https://${process.env.GITHUB_ACTOR}:${TOKEN}@github.com/${process.env.GITHUB_REPOSITORY}.git`;
 
