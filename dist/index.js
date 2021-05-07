@@ -10768,34 +10768,40 @@ const push = async (cwd) => {
 };
 
 const parseCoverage = async () => {
+    console.log('Enter parseCoverage');
+    console.log('Create glob')
     const globber = await glob.create();
+    console.log('Globber.glob')
     const files = await globber.glob();
 
     if (files.length === 0) {
         fail('Coverage file not found :/');
     }
 
+    console.log('xml2js');
     const options = {ignoreComment: true, alwaysChildren: true};
     const json = convert.xml2js(fs.readFileSync(files[0], {encoding: 'utf8'}), options);
+    console.log('retrieveGlobalMetricsElement');
     const metrics = retrieveGlobalMetricsElement(json);
+    console.log('Calculate metrics');
     const total = parseInt(metrics.attributes.elements, 10);
     const covered = parseInt(metrics.attributes.coveredelements, 10);
     const coverage = parseFloat((100 * covered / total).toFixed(3));
 
     console.log('Metrics gathered from clover file:', metrics.attributes);
 
+    console.log('Exit parseCoverage');
     return {total, covered, coverage};
 }
 
 const parseCoverages = async () => {
-    console.log('Enter parseCoverages');
     const reports = {};
 
     for (const file of COVERAGE_FILES) {
+        console.log(file);
         reports[file.summary] = await parseCoverage(file.coverage);
     }
 
-    console.log('Exit parseCoverages');
     return reports;
 };
 
@@ -10884,7 +10890,6 @@ const update = async coverages => {
 };
 
 const check = async coverages => {
-    console.log('Enter check');
     const baseCoverages = {};
     const messages = [];
 
@@ -10908,8 +10913,6 @@ const check = async coverages => {
     messages.push('global\n' + buildResultMessage(globalBaseCoverage, globalCoverage));
 
     await postMessageOnPullRequest(messages.join('\n---\n'));
-
-    console.log('Exit check');
 };
 
 const action = async () => {
