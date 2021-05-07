@@ -10788,12 +10788,14 @@ const parseCoverage = async () => {
 }
 
 const parseCoverages = async () => {
+    console.log('Enter parseCoverages');
     const reports = {};
 
     for (const file of COVERAGE_FILES) {
         reports[file.summary] = await parseCoverage(file.coverage);
     }
 
+    console.log('Exit parseCoverages');
     return reports;
 };
 
@@ -10882,6 +10884,7 @@ const update = async coverages => {
 };
 
 const check = async coverages => {
+    console.log('Enter check');
     const baseCoverages = {};
     const messages = [];
 
@@ -10905,6 +10908,8 @@ const check = async coverages => {
     messages.push('global\n' + buildResultMessage(globalBaseCoverage, globalCoverage));
 
     await postMessageOnPullRequest(messages.join('\n---\n'));
+
+    console.log('Exit check');
 };
 
 const action = async () => {
@@ -10917,7 +10922,6 @@ const action = async () => {
     }
 };
 
-console.log(COVERAGE_FILES);
 action();
 
 })();
