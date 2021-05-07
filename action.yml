@@ -4,7 +4,7 @@ inputs:
   token:
     description: 'The github token'
     required: true
-  files:
+  coverage-files:
     description: 'A JSON array of objects representing the coverage files to process, and the summaries to push on the coverage branch'
     required: true
     default: '[{"coverage": "coverage.xml", "summary": "coverage-summary.json"}]'

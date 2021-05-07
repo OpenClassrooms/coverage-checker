@@ -10921,7 +10921,7 @@ const action = async () => {
 
 //action();
 
-console.log(core.getInput('files'));
+console.log(core.getInput('coverage-files'));
 
 })();
 
