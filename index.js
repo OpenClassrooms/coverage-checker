@@ -232,4 +232,6 @@ const action = async () => {
     }
 };
 
-action();
+//action();
+
+console.log(core.getInput('files'));
