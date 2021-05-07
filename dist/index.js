@@ -10696,7 +10696,7 @@ const convert = __nccwpck_require__(2954);
 
 const ACTION = core.getInput('action');
 const COVERAGE_BRANCH = 'coverage';
-const FILES = JSON.parse(core.getInput('coverage-files'));
+const COVERAGE_FILES = JSON.parse(core.getInput('coverage-files'));
 const TOKEN = core.getInput('token');
 const REPO = `https://${process.env.GITHUB_ACTOR}:${TOKEN}@github.com/${process.env.GITHUB_REPOSITORY}.git`;
 
@@ -10790,7 +10790,7 @@ const parseCoverage = async () => {
 const parseCoverages = async () => {
     const reports = {};
 
-    for (const file of FILES) {
+    for (const file of COVERAGE_FILES) {
         reports[file.summary] = await parseCoverage(file.coverage);
     }
 
@@ -10917,8 +10917,8 @@ const action = async () => {
     }
 };
 
-//action();
-console.log(typeof FILES);
+console.log(COVERAGE_FILES);
+action();
 
 })();
 
