@@ -28,6 +28,7 @@ const execute = (command, options) => new Promise(function (resolve, reject) {
             return;
         }
 
+        console.log(command, stdout);
         resolve(stdout.trim());
     };
 
