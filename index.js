@@ -20,8 +20,9 @@ const fail = (message) => {
 };
 
 const execute = (command, options) => new Promise(function (resolve, reject) {
-    const cb = (error, stdout) => {
+    const cb = (error, stdout, stderr) => {
         if (error) {
+            console.log(command, stderr);
             core.setFailed(error);
             reject(error);
 
