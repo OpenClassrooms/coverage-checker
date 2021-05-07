@@ -103,12 +103,9 @@ const parseCoverage = async () => {
 }
 
 const parseCoverages = async () => {
-    console.log(FILES);
-    const files = JSON.parse(FILES);
-    console.log(files);
     const reports = {};
 
-    for (const file of files) {
+    for (const file of FILES) {
         reports[file.summary] = await parseCoverage(file.coverage);
     }
 
