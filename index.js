@@ -209,13 +209,15 @@ const check = async coverages => {
 
         baseCoverages[summaryFile] = await baseCoverageResult.json();
 
-        messages.push(summaryFile + '\n' + buildResultMessage(baseCoverages[summaryFile], coverage));
+        messages.push('> ' + summaryFile + '\n' + buildResultMessage(baseCoverages[summaryFile], coverage));
     }
 
-    const globalBaseCoverage = sumCoverages(baseCoverages);
-    const globalCoverage = sumCoverages(coverages);
+    if (Object.keys(coverages).length > 1) {
+        const globalBaseCoverage = sumCoverages(baseCoverages);
+        const globalCoverage = sumCoverages(coverages);
 
-    messages.push('global\n' + buildResultMessage(globalBaseCoverage, globalCoverage));
+        messages.push('> global\n' + buildResultMessage(globalBaseCoverage, globalCoverage));
+    }
 
     await postMessageOnPullRequest(messages.join('\n---\n'));
 };
