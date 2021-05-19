@@ -4,14 +4,10 @@ inputs:
   token:
     description: 'The github token'
     required: true
-  coverage-file:
-    description: 'The coverage summary at clover format'
+  files:
+    description: 'A JSON array of objects representing the coverage files to process, and the summaries to push on the coverage branch'
     required: true
-    default: 'coverage.xml'
-  summary-file:
-    description: 'The summary JSON file to be pushed on the coverage branch'
-    required: true
-    default: 'coverage-summary.json'
+    default: '[{"coverage": "coverage.xml", "summary": "coverage-summary.json"}]'
   action:
     description: 'Do we want to update the base coverage, or to check it has not been degraded?'
     required: true
