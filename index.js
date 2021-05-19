@@ -227,7 +227,7 @@ const check = async coverages => {
         const globalBaseCoverage = sumCoverages(baseCoverages);
         const globalCoverage = sumCoverages(coverages);
 
-        messages.push('global\n' + buildResultMessage(globalBaseCoverage, globalCoverage));
+        messages.push('*Global* \n\n' + buildResultMessage(globalBaseCoverage, globalCoverage));
     }
 
     await postMessageOnPullRequest(messages.join('\n---\n'));
