@@ -10854,7 +10854,8 @@ const buildDeltaMessage = (oldCoverage, newCoverage) => {
         '| Total lines | ' + oldCoverage.total + ' | ' + newCoverage.total + ' |',
         '| Covered lines | ' + oldCoverage.covered + ' | ' + newCoverage.covered + ' |',
         '',
-        '∆ ' + (newCoverage.coverage - oldCoverage.coverage).toFixed(3)
+        '∆ ' + (newCoverage.coverage - oldCoverage.coverage).toFixed(3),
+        ''
     ].join('\n');
 }
 
@@ -10906,7 +10907,7 @@ const check = async coverages => {
 
         baseCoverages[summaryFile] = await baseCoverageResult.json();
 
-        messages.push(summaryFile + '\n' + buildResultMessage(baseCoverages[summaryFile], coverage));
+        messages.push('*' + summaryFile + '* \n\n' + buildResultMessage(baseCoverages[summaryFile], coverage));
     }
 
     if (Object.keys(coverages).length > 1) {
