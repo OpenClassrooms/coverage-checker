@@ -57,14 +57,19 @@ const retrieveGlobalMetricsElement = json => findNode(findNode(findNode(json, 'c
 const clone = async () => {
     const cloneInto = `repo-${new Date().getTime()}`;
 
+    console.log(`Cloning repository in ${cloneInto}`);
     await execute(`git clone ${REPO} ${cloneInto}`);
+
+    console.log(`Retrieving existing branches`);
     const list = await execute(`git branch -a`, {cwd: cloneInto});
     const branches = list.split('\n').filter(b => b.length > 2).map(b => b.replace('remotes/origin/', '').trim());
 
     if (branches.includes(COVERAGE_BRANCH)) {
+        console.log(`Coverage branch exists. Checking it out.`);
         await execute(`git checkout ${COVERAGE_BRANCH}`, {cwd: cloneInto});
         await execute(`git pull`, {cwd: cloneInto});
     } else {
+        console.log(`Coverage branch does not exist. Creating it.`);
         await execute(`git checkout --orphan ${COVERAGE_BRANCH}`, {cwd: cloneInto});
         await execute(`rm -rf *`, {cwd: cloneInto});
     }
@@ -97,14 +102,16 @@ const parseCoverage = async file => {
 
     console.log('Metrics gathered from clover file:', metrics.attributes);
 
-    return {total, covered, coverage};
+    return { total, covered, coverage };
 }
 
 const parseCoverages = async () => {
     const reports = {};
 
     for (const file of COVERAGE_FILES) {
+        console.log(`Parsing ${file.coverage}...`);
         reports[file.summary] = await parseCoverage(file.coverage);
+        console.log(`Parsed ${file.coverage}`);
     }
 
     return reports;
@@ -183,12 +190,15 @@ const buildResultMessage = (oldCoverage, newCoverage) => {
 }
 
 const update = async coverages => {
+    console.log('Updating base coverage...');
     const workingDir = await clone();
 
     for (const summaryFile of Object.keys(coverages)) {
+        console.log(`Writing ${summaryFile} report (${workingDir}/${summaryFile})`);
         fs.writeFileSync(`${workingDir}/${summaryFile}`, JSON.stringify(coverages[summaryFile]));
     }
 
+    console.log('Pushing to coverage branch');
     await push(workingDir);
 
     console.log('Coverage successfully updated');
@@ -224,6 +234,7 @@ const check = async coverages => {
 
 const action = async () => {
     try {
+        console.log('Parsing clover files...')
         const coverages = await parseCoverages();
 
         await (ACTION === 'update' ? update(coverages) : check(coverages));
