@@ -10758,7 +10758,7 @@ const clone = async () => {
     } else {
         console.log(`Coverage branch does not exist. Creating it.`);
         await execute(`git checkout --orphan ${COVERAGE_BRANCH}`, {cwd: cloneInto});
-        await execute(`rm -rf *`, {cwd: cloneInto});
+        await execute(`rm -rf .`, {cwd: cloneInto});
     }
 
     return cloneInto;
@@ -10827,6 +10827,24 @@ const sumCoverages = coverages => {
     return out;
 }
 
+const getBadgeUrl = (coverage, label) => `https://img.shields.io/static/v1?label=${encodeURIComponent(label)}&message=${encodeURIComponent(coverage)}%25&color=${processBadgeColor(coverage)}&style=for-the-badge`;
+
+const processBadgeColor = coverage => {
+    const colors = [
+        { threshold: 50, color: 'red' },
+        { threshold: 75, color: 'orange' },
+        { threshold: 95, color: 'yellow' }
+    ];
+
+    for (let i = 0 ; i < colors.length ; i++) {
+        if (coverage < colors[i].threshold) {
+            return colors[i].color;
+        }
+    }
+
+    return 'green';
+}
+
 const postMessageOnPullRequest = async message => {
     const context = github.context;
 
@@ -10882,8 +10900,16 @@ const update = async coverages => {
     const workingDir = await clone();
 
     for (const summaryFile of Object.keys(coverages)) {
+        const conf = COVERAGE_FILES.find(e => e.summary === summaryFile);
+
         console.log(`Writing ${summaryFile} report (${workingDir}/${summaryFile})`);
         fs.writeFileSync(`${workingDir}/${summaryFile}`, JSON.stringify(coverages[summaryFile]));
+
+        if (conf.badge) {
+            const badgeContent = await fetch(getBadgeUrl(coverages[summaryFile].coverage, conf.label));
+
+            fs.writeFileSync(`${workingDir}/${conf.badge}`, await badgeContent.text());
+        }
     }
 
     console.log('Pushing to coverage branch');
@@ -10907,7 +10933,7 @@ const check = async coverages => {
 
         baseCoverages[summaryFile] = await baseCoverageResult.json();
 
-        messages.push('*' + summaryFile + '* \n\n' + buildResultMessage(baseCoverages[summaryFile], coverage));
+        messages.push('*' + COVERAGE_FILES.find(e => e.summary === summaryFile).label + '* \n\n' + buildResultMessage(baseCoverages[summaryFile], coverage));
     }
 
     if (Object.keys(coverages).length > 1) {

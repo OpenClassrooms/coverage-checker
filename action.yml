@@ -7,7 +7,7 @@ inputs:
   files:
     description: 'A JSON array of objects representing the coverage files to process, and the summaries to push on the coverage branch'
     required: true
-    default: '[{"coverage": "coverage.xml", "summary": "coverage-summary.json"}]'
+    default: '[{"coverage": "coverage.xml", "summary": "coverage-summary.json", "label": "Coverage", "badge": "coverage.svg"}]'
   action:
     description: 'Do we want to update the base coverage, or to check it has not been degraded?'
     required: true
