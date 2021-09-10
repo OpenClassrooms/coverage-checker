@@ -10699,6 +10699,7 @@ const COVERAGE_BRANCH = 'coverage';
 const COVERAGE_FILES = JSON.parse(core.getInput('files'));
 const TOKEN = core.getInput('token');
 const REPO = `https://${process.env.GITHUB_ACTOR}:${TOKEN}@github.com/${process.env.GITHUB_REPOSITORY}.git`;
+const HISTORY_FILENAME = 'coverage-history.json';
 
 const fail = (message) => {
     core.setFailed(message);
@@ -10811,6 +10812,13 @@ const fetchBaseCoverage = summaryFile => fetch(`https://raw.githubusercontent.co
     }
 });
 
+const fetchHistory = () => fetch(`https://raw.githubusercontent.com/${process.env.GITHUB_REPOSITORY}/${COVERAGE_BRANCH}/${HISTORY_FILENAME}`, {
+    headers: {
+        'Authorization': `token ${TOKEN}`,
+        'Accept': 'application/vnd.github.v3.raw'
+    }
+});
+
 const sumCoverages = coverages => {
     const out = {
         total: 0,
@@ -10898,6 +10906,8 @@ const buildResultMessage = (oldCoverage, newCoverage) => {
 const update = async coverages => {
     console.log('Updating base coverage...');
     const workingDir = await clone();
+    const historyFile = await fetchHistory();
+    const history = historyFile.status === 200 ? (await historyFile.json()) : {};
 
     for (const summaryFile of Object.keys(coverages)) {
         const conf = COVERAGE_FILES.find(e => e.summary === summaryFile);
@@ -10910,7 +10920,17 @@ const update = async coverages => {
 
             fs.writeFileSync(`${workingDir}/${conf.badge}`, await badgeContent.text());
         }
+
+        if (typeof history[conf.label] === 'undefined') {
+            history[conf.label] = [];
+        }
+
+        history[conf.label].push({
+            time: (new Date()).toISOString(),
+            coverage: coverages[summaryFile].coverage
+        });
     }
+    fs.writeFileSync(`${workingDir}/${HISTORY_FILENAME}`, JSON.stringify(history));
 
     console.log('Pushing to coverage branch');
     await push(workingDir);
