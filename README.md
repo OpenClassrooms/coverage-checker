@@ -45,6 +45,14 @@ jobs:
 ```
 > Note that the `Run test suite` step will generate a [`clover` file containing the coverage information](https://openclover.org/documentation). This action will use this file to generate the report.
 
+#### Badge generation
+
+If a "badge" property is defined in the configuration, the update action will generate an SVG badge and commit it in the coverage branch.
+
+#### Coverage history
+
+A file named `coverage-history.json`, persisted in the coverage branch, will be updated at each base coverage update. By querying it and using it in a visualization tool, you'll be able to share metrics regarding your coverage history easily. 
+
 ### Check
 
 ```yaml
