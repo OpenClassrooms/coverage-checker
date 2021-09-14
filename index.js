@@ -13,6 +13,7 @@ const COVERAGE_FILES = JSON.parse(core.getInput('files'));
 const TOKEN = core.getInput('token');
 const REPO = `https://${process.env.GITHUB_ACTOR}:${TOKEN}@github.com/${process.env.GITHUB_REPOSITORY}.git`;
 const HISTORY_FILENAME = 'coverage-history.json';
+const REPORT_MESSAGE_HEADER = 'Issued by Coverage Checker:';
 
 const fail = (message) => {
     core.setFailed(message);
@@ -175,13 +176,38 @@ const postMessageOnPullRequest = async message => {
         return;
     }
 
+    const body = REPORT_MESSAGE_HEADER + '\n\n' + message;
+
     const pullRequestNumber = context.payload.pull_request.number;
     const octokit = new github.getOctokit(TOKEN);
-    await octokit.issues.createComment({
+
+    const commentId = await retrieveCommentIdFromPullRequest(context, octokit);
+
+    if (commentId !== null) {
+        await octokit.issues.updateComment({
+           ...context.repo,
+           body,
+           comment_id: commentId
+        });
+    } else {
+        await octokit.issues.createComment({
+           ...context.repo,
+           body,
+           issue_number: pullRequestNumber
+        });
+    }
+};
+
+const retrieveCommentIdFromPullRequest = async (context, octokit) => {
+    const pullRequestNumber = context.payload.pull_request.number;
+
+    const { data: comments } = await octokit.issues.listComments({
        ...context.repo,
-       issue_number: pullRequestNumber,
-       body: message
-   });
+       issue_number: pullRequestNumber
+    });
+    const comment = comments.find(comment => comment.user.login === 'github-actions[bot]' && comment.body.startsWith(REPORT_MESSAGE_HEADER));
+
+    return comment ? comment.id : null;
 };
 
 const buildDeltaMessage = (oldCoverage, newCoverage) => {
