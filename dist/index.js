@@ -11043,7 +11043,7 @@ const extractNodes = (tree, name) => {
     }
 
     let out = [];
-    tree.elements.filter(e => e.name !== name).forEach(e => out = out.concat(extractNodes(e)));
+    tree.elements.filter(e => e.name !== name).forEach(e => out = out.concat(extractNodes(e, name)));
     out = out.concat(tree.elements.filter(e => e.name === name));
 
     return out;
