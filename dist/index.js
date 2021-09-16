@@ -10,33 +10,41 @@ __nccwpck_require__.r(__webpack_exports__);
 /* harmony export */   "check": () => (/* binding */ check),
 /* harmony export */   "update": () => (/* binding */ update)
 /* harmony export */ });
+/* harmony import */ var _coverage__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3306);
+
+
 const fs = __nccwpck_require__(5747);
 const { generateBadge } = __nccwpck_require__ (4721);
-const { retrieveBaseCoverage, retrieveHistory, sumCoverages } = __nccwpck_require__(3306);
+const { retrieveBaseCoverage, retrieveBaseDetailedCoverages, retrieveHistory, sumCoverages } = __nccwpck_require__(3306);
 const { clone, push } = __nccwpck_require__(7803);
 const { buildResultMessage, postMessageOnPullRequest } = __nccwpck_require__ (430);
 
 const check = async (coverages, coverageBranch, coverageFiles, reportMessageHeader) => {
-    const baseCoverages = {};
+    const baseOverallCoverages = {};
+    const newOverallCoverages = {};
     const messages = [];
 
     for (const summaryFile of Object.keys(coverages)) {
-        const baseCoverageResult = await retrieveBaseCoverage(summaryFile, coverageBranch);
-        const coverage = coverages[summaryFile];
+        const baseOverallCoverageResult = await retrieveBaseCoverage(summaryFile, coverageBranch);
+        const baseDetailedCoverageResult = await retrieveBaseDetailedCoverages(summaryFile, coverageBranch);
+        const newOverallCoverage = coverages[summaryFile].overall;
 
-        if (baseCoverageResult === null) {
-            console.log(`No base coverage ${summaryFile} found. Current coverage is ${coverage.coverage}% (${coverage.total} lines, ${coverage.covered} covered)`);
+        if (baseOverallCoverageResult === null) {
+            console.log(`No base coverage ${summaryFile} found. Current coverage is ${newOverallCoverage.coverage}% (${newOverallCoverage.total} lines, ${newOverallCoverage.covered} covered)`);
             continue;
         }
 
-        baseCoverages[summaryFile] = baseCoverageResult;
+        newOverallCoverages[summaryFile] = newOverallCoverage;
+        baseOverallCoverages[summaryFile] = baseOverallCoverageResult;
 
-        messages.push('*' + coverageFiles.find(e => e.summary === summaryFile).label + '* \n\n' + buildResultMessage(baseCoverages[summaryFile], coverage));
+        const detailedDiff = baseDetailedCoverageResult === null ? null : (0,_coverage__WEBPACK_IMPORTED_MODULE_0__.compareDetailedCoverages)(baseDetailedCoverageResult, coverages[summaryFile].detailed);
+
+        messages.push('*' + coverageFiles.find(e => e.summary === summaryFile).label + '* \n\n' + buildResultMessage(baseOverallCoverages[summaryFile], newOverallCoverage, detailedDiff));
     }
 
     if (Object.keys(coverages).length > 1) {
-        const globalBaseCoverage = sumCoverages(baseCoverages);
-        const globalCoverage = sumCoverages(coverages);
+        const globalBaseCoverage = sumCoverages(baseOverallCoverages);
+        const globalCoverage = sumCoverages(newOverallCoverages);
 
         messages.push('*Global* \n\n' + buildResultMessage(globalBaseCoverage, globalCoverage));
     }
@@ -53,10 +61,11 @@ const update = async (coverages, coverageBranch, repository, historyFilename, co
         const conf = coverageFiles.find(e => e.summary === summaryFile);
 
         console.log(`Writing ${summaryFile} report (${workingDir}/${summaryFile})`);
-        fs.writeFileSync(`${workingDir}/${summaryFile}`, JSON.stringify(coverages[summaryFile]));
+        fs.writeFileSync(`${workingDir}/${summaryFile}`, JSON.stringify(coverages[summaryFile].overall));
+        fs.writeFileSync(`${workingDir}/detailed-${summaryFile}`, JSON.stringify(coverages[summaryFile].detailed));
 
         if (conf.badge) {
-            await generateBadge(coverages[summaryFile].coverage, conf.label, conf.badge, workingDir);
+            await generateBadge(coverages[summaryFile].overall.coverage, conf.label, conf.badge, workingDir);
         }
 
         if (typeof history[conf.label] === 'undefined') {
@@ -65,7 +74,7 @@ const update = async (coverages, coverageBranch, repository, historyFilename, co
 
         history[conf.label].push({
             time: (new Date()).toISOString(),
-            coverage: coverages[summaryFile].coverage
+            coverage: coverages[summaryFile].overall.coverage
         });
     }
     fs.writeFileSync(`${workingDir}/${historyFilename}`, JSON.stringify(history));
@@ -170,8 +179,10 @@ const execute = (command, options) => new Promise(function (resolve, reject) {
 "use strict";
 __nccwpck_require__.r(__webpack_exports__);
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "compareDetailedCoverages": () => (/* binding */ compareDetailedCoverages),
 /* harmony export */   "parseCoverages": () => (/* binding */ parseCoverages),
 /* harmony export */   "retrieveBaseCoverage": () => (/* binding */ retrieveBaseCoverage),
+/* harmony export */   "retrieveBaseDetailedCoverages": () => (/* binding */ retrieveBaseDetailedCoverages),
 /* harmony export */   "retrieveHistory": () => (/* binding */ retrieveHistory),
 /* harmony export */   "sumCoverages": () => (/* binding */ sumCoverages)
 /* harmony export */ });
@@ -179,8 +190,50 @@ const convert = __nccwpck_require__(2954);
 const fs = __nccwpck_require__(5747);
 const glob = __nccwpck_require__(916);
 const { fail } = __nccwpck_require__(2148);
-const { fetchBaseCoverage, fetchHistory } = __nccwpck_require__(6857);
-const { retrieveGlobalMetricsElement } = __nccwpck_require__(8853);
+const { fetchBaseCoverage, fetchBaseDetailedCoverages, fetchHistory } = __nccwpck_require__(6857);
+const { retrieveDetailedFilesElements, retrieveGlobalMetricsElement, retrieveMetricsElement } = __nccwpck_require__(8853);
+
+const compareDetailedCoverages = (oldCoverages, newCoverages) => {
+    const out = {
+        degraded: [],
+        improved: []
+    };
+
+    for (const filename of Object.keys(oldCoverages)) {
+        if (typeof newCoverages[filename] === 'undefined' || newCoverages[filename].coverage === oldCoverages[filename].coverage) {
+            continue;
+        }
+
+        const oldCoverage = Number(oldCoverages[filename].coverage);
+        const newCoverage = Number(newCoverages[filename].coverage);
+
+        out[newCoverage < oldCoverage ? 'degraded' : 'improved'] = {
+            filename,
+            old: `${oldCoverages[filename].covered} / ${oldCoverages[filename].total} (${oldCoverages[filename].coverage}%)`,
+            new: `${newCoverages[filename].covered} / ${newCoverages[filename].total} (${newCoverages[filename].coverage}%)`
+        };
+    }
+
+    return out.degraded.length === 0 && out.improved.length === 0 ? null : out;
+}
+
+const extractCoverageFromMetricsElement = (metrics) => {
+    const total = parseInt(metrics.attributes.elements, 10);
+    const covered = parseInt(metrics.attributes.coveredelements, 10);
+    const coverage = parseFloat((100 * covered / total).toFixed(3));
+
+    return { total, covered, coverage };
+}
+
+const extractDetailedCoverages = (json) => {
+    const out = {};
+
+    for (const fileElement of retrieveDetailedFilesElements(json)) {
+        out[fileElement.attributes.name] = extractCoverageFromMetricsElement(retrieveMetricsElement(fileElement));
+    }
+
+    return out;
+}
 
 const parseCoverage = async (file) => {
     const globber = await glob.create(file);
@@ -192,14 +245,11 @@ const parseCoverage = async (file) => {
 
     const options = {ignoreComment: true, alwaysChildren: true};
     const json = convert.xml2js(fs.readFileSync(files[0], {encoding: 'utf8'}), options);
-    const metrics = retrieveGlobalMetricsElement(json);
-    const total = parseInt(metrics.attributes.elements, 10);
-    const covered = parseInt(metrics.attributes.coveredelements, 10);
-    const coverage = parseFloat((100 * covered / total).toFixed(3));
 
-    console.log('Metrics gathered from clover file:', metrics.attributes);
-
-    return { total, covered, coverage };
+    return {
+        overall: extractCoverageFromMetricsElement(retrieveGlobalMetricsElement(json)),
+        detailed: extractDetailedCoverages(json)
+    };
 }
 
 const parseCoverages = async (coverageFiles) => {
@@ -222,6 +272,16 @@ const retrieveBaseCoverage = async (summaryFile, coverageBranch) => {
     }
 
     return await baseCoverageResult.json();
+}
+
+const retrieveBaseDetailedCoverages = async (summaryFile, coverageBranch) => {
+    const baseDetailedCoveragesResult = await fetchBaseDetailedCoverages(summaryFile, coverageBranch);
+
+    if (baseDetailedCoveragesResult.status === 404) {
+        return null;
+    }
+
+    return await baseDetailedCoveragesResult.json();
 }
 
 const retrieveHistory = async (coverageBranch, historyFilename) => {
@@ -325,22 +385,55 @@ const buildDeltaMessage = (oldCoverage, newCoverage) => {
     ].join('\n');
 }
 
-const buildFailureMessage = (oldCoverage, newCoverage) => {
-    return ':x: Your code coverage has been degraded :sob:' + buildDeltaMessage(oldCoverage, newCoverage);
+const buildDetailedDiffTable = (diff) => {
+    const out = [
+        '',
+        '| File | On main branch | ' + process.env.GITHUB_REF + ' |',
+        '| --- | --- | --- |'
+    ];
+
+    for (const entry of diff) {
+        out.push('| ' + entry.filename + ' | ' + entry.old + ' | ' + entry.new + ' | ');
+    }
+
+    out.push('');
+
+    return out . join('\n');
 };
 
-const buildSuccessMessage = (oldCoverage, newCoverage) => {
-    return ':white_check_mark: Your code coverage has not been degraded :tada:' + buildDeltaMessage(oldCoverage, newCoverage);
+const buildDetailedDiffMessage = (detailedDiff) => {
+    if (detailedDiff === null) {
+        return '';
+    }
+
+    let out = '';
+
+    if (detailedDiff.improved.length > 0) {
+        out += ':green_circle: :arrow_upper_right: Improved files: \n' + buildDetailedDiffTable(detailedDiff.improved);
+    }
+    if (detailedDiff.degraded.length > 0) {
+        out += ':red_circle: :arrow_lower_right: Degraded files: \n' + buildDetailedDiffTable(detailedDiff.degraded);
+    }
+
+    return out + '/n';
 };
 
-const buildResultMessage = (oldCoverage, newCoverage) => {
+const buildFailureMessage = (oldCoverage, newCoverage, detailedDiff) => {
+    return ':x: Your code coverage has been degraded :sob:' + buildDeltaMessage(oldCoverage, newCoverage) + buildDetailedDiffMessage(detailedDiff);
+};
+
+const buildSuccessMessage = (oldCoverage, newCoverage, detailedDiff) => {
+    return ':white_check_mark: Your code coverage has not been degraded :tada:' + buildDeltaMessage(oldCoverage, newCoverage)  + buildDetailedDiffMessage(detailedDiff);
+};
+
+const buildResultMessage = (oldCoverage, newCoverage, detailedDiff = null) => {
     if (newCoverage.coverage < oldCoverage.coverage) {
         core.setFailed('Code coverage has been degraded');
 
-        return buildFailureMessage(oldCoverage, newCoverage);
+        return buildFailureMessage(oldCoverage, newCoverage, detailedDiff);
     }
 
-    return buildSuccessMessage(oldCoverage, newCoverage);
+    return buildSuccessMessage(oldCoverage, newCoverage, detailedDiff);
 }
 
 const postMessageOnPullRequest = async (message, header) => {
@@ -10906,8 +10999,9 @@ module.exports = function(xml, userOptions) {
 "use strict";
 __nccwpck_require__.r(__webpack_exports__);
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   "fetchHistory": () => (/* binding */ fetchHistory),
-/* harmony export */   "fetchBaseCoverage": () => (/* binding */ fetchBaseCoverage)
+/* harmony export */   "fetchBaseCoverage": () => (/* binding */ fetchBaseCoverage),
+/* harmony export */   "fetchBaseDetailedCoverages": () => (/* binding */ fetchBaseDetailedCoverages),
+/* harmony export */   "fetchHistory": () => (/* binding */ fetchHistory)
 /* harmony export */ });
 const core = __nccwpck_require__(5127);
 const fetch = __nccwpck_require__(8534);
@@ -10922,6 +11016,8 @@ const getFromGithub = (url) => fetch(url, {
 
 const fetchBaseCoverage = (summaryFile, coverageBranch) => getFromGithub(`https://raw.githubusercontent.com/${process.env.GITHUB_REPOSITORY}/${coverageBranch}/${summaryFile}`);
 
+const fetchBaseDetailedCoverages = (summaryFile, coverageBranch) => getFromGithub(`https://raw.githubusercontent.com/${process.env.GITHUB_REPOSITORY}/${coverageBranch}/detailed-${summaryFile}`);
+
 const fetchHistory = (coverageBranch, historyFilename) => getFromGithub(`https://raw.githubusercontent.com/${process.env.GITHUB_REPOSITORY}/${coverageBranch}/${historyFilename}`);
 
 
@@ -10935,9 +11031,23 @@ const fetchHistory = (coverageBranch, historyFilename) => getFromGithub(`https:/
 "use strict";
 __nccwpck_require__.r(__webpack_exports__);
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   "retrieveGlobalMetricsElement": () => (/* binding */ retrieveGlobalMetricsElement)
+/* harmony export */   "retrieveDetailedFilesElements": () => (/* binding */ retrieveDetailedFilesElements),
+/* harmony export */   "retrieveGlobalMetricsElement": () => (/* binding */ retrieveGlobalMetricsElement),
+/* harmony export */   "retrieveMetricsElement": () => (/* binding */ retrieveMetricsElement)
 /* harmony export */ });
 const { fail } = __nccwpck_require__(2148);
+
+const extractNodes = (tree, name) => {
+    if (!tree.elements || tree.elements.length === 0) {
+        return [];
+    }
+
+    let out = [];
+    tree.elements.filter(e => e.name !== name).forEach(e => out = out.concat(extractNodes(e)));
+    out = out.concat(tree.elements.filter(e => e.name === name));
+
+    return out;
+};
 
 const findNode = (tree, name) => {
     if (!tree.elements) {
@@ -10954,6 +11064,10 @@ const findNode = (tree, name) => {
 }
 
 const retrieveGlobalMetricsElement = json => findNode(findNode(findNode(json, 'coverage'), 'project'), 'metrics');
+
+const retrieveDetailedFilesElements = json => extractNodes(json, 'file');
+
+const retrieveMetricsElement = json => findNode(json, 'metrics');
 
 
 

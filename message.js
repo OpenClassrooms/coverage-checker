@@ -16,22 +16,55 @@ const buildDeltaMessage = (oldCoverage, newCoverage) => {
     ].join('\n');
 }
 
-const buildFailureMessage = (oldCoverage, newCoverage) => {
-    return ':x: Your code coverage has been degraded :sob:' + buildDeltaMessage(oldCoverage, newCoverage);
+const buildDetailedDiffTable = (diff) => {
+    const out = [
+        '',
+        '| File | On main branch | ' + process.env.GITHUB_REF + ' |',
+        '| --- | --- | --- |'
+    ];
+
+    for (const entry of diff) {
+        out.push('| ' + entry.filename + ' | ' + entry.old + ' | ' + entry.new + ' | ');
+    }
+
+    out.push('');
+
+    return out . join('\n');
 };
 
-const buildSuccessMessage = (oldCoverage, newCoverage) => {
-    return ':white_check_mark: Your code coverage has not been degraded :tada:' + buildDeltaMessage(oldCoverage, newCoverage);
+const buildDetailedDiffMessage = (detailedDiff) => {
+    if (detailedDiff === null) {
+        return '';
+    }
+
+    let out = '';
+
+    if (detailedDiff.improved.length > 0) {
+        out += ':green_circle: :arrow_upper_right: Improved files: \n' + buildDetailedDiffTable(detailedDiff.improved);
+    }
+    if (detailedDiff.degraded.length > 0) {
+        out += ':red_circle: :arrow_lower_right: Degraded files: \n' + buildDetailedDiffTable(detailedDiff.degraded);
+    }
+
+    return out + '/n';
 };
 
-const buildResultMessage = (oldCoverage, newCoverage) => {
+const buildFailureMessage = (oldCoverage, newCoverage, detailedDiff) => {
+    return ':x: Your code coverage has been degraded :sob:' + buildDeltaMessage(oldCoverage, newCoverage) + buildDetailedDiffMessage(detailedDiff);
+};
+
+const buildSuccessMessage = (oldCoverage, newCoverage, detailedDiff) => {
+    return ':white_check_mark: Your code coverage has not been degraded :tada:' + buildDeltaMessage(oldCoverage, newCoverage)  + buildDetailedDiffMessage(detailedDiff);
+};
+
+const buildResultMessage = (oldCoverage, newCoverage, detailedDiff = null) => {
     if (newCoverage.coverage < oldCoverage.coverage) {
         core.setFailed('Code coverage has been degraded');
 
-        return buildFailureMessage(oldCoverage, newCoverage);
+        return buildFailureMessage(oldCoverage, newCoverage, detailedDiff);
     }
 
-    return buildSuccessMessage(oldCoverage, newCoverage);
+    return buildSuccessMessage(oldCoverage, newCoverage, detailedDiff);
 }
 
 const postMessageOnPullRequest = async (message, header) => {

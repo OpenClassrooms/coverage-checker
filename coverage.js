@@ -2,8 +2,50 @@ const convert = require('xml-js');
 const fs = require('fs');
 const glob = require('@actions/glob');
 const { fail } = require('./core');
-const { fetchBaseCoverage, fetchHistory } = require('./remote');
-const { retrieveGlobalMetricsElement } = require('./xml');
+const { fetchBaseCoverage, fetchBaseDetailedCoverages, fetchHistory } = require('./remote');
+const { retrieveDetailedFilesElements, retrieveGlobalMetricsElement, retrieveMetricsElement } = require('./xml');
+
+const compareDetailedCoverages = (oldCoverages, newCoverages) => {
+    const out = {
+        degraded: [],
+        improved: []
+    };
+
+    for (const filename of Object.keys(oldCoverages)) {
+        if (typeof newCoverages[filename] === 'undefined' || newCoverages[filename].coverage === oldCoverages[filename].coverage) {
+            continue;
+        }
+
+        const oldCoverage = Number(oldCoverages[filename].coverage);
+        const newCoverage = Number(newCoverages[filename].coverage);
+
+        out[newCoverage < oldCoverage ? 'degraded' : 'improved'] = {
+            filename,
+            old: `${oldCoverages[filename].covered} / ${oldCoverages[filename].total} (${oldCoverages[filename].coverage}%)`,
+            new: `${newCoverages[filename].covered} / ${newCoverages[filename].total} (${newCoverages[filename].coverage}%)`
+        };
+    }
+
+    return out.degraded.length === 0 && out.improved.length === 0 ? null : out;
+}
+
+const extractCoverageFromMetricsElement = (metrics) => {
+    const total = parseInt(metrics.attributes.elements, 10);
+    const covered = parseInt(metrics.attributes.coveredelements, 10);
+    const coverage = parseFloat((100 * covered / total).toFixed(3));
+
+    return { total, covered, coverage };
+}
+
+const extractDetailedCoverages = (json) => {
+    const out = {};
+
+    for (const fileElement of retrieveDetailedFilesElements(json)) {
+        out[fileElement.attributes.name] = extractCoverageFromMetricsElement(retrieveMetricsElement(fileElement));
+    }
+
+    return out;
+}
 
 const parseCoverage = async (file) => {
     const globber = await glob.create(file);
@@ -15,14 +57,11 @@ const parseCoverage = async (file) => {
 
     const options = {ignoreComment: true, alwaysChildren: true};
     const json = convert.xml2js(fs.readFileSync(files[0], {encoding: 'utf8'}), options);
-    const metrics = retrieveGlobalMetricsElement(json);
-    const total = parseInt(metrics.attributes.elements, 10);
-    const covered = parseInt(metrics.attributes.coveredelements, 10);
-    const coverage = parseFloat((100 * covered / total).toFixed(3));
 
-    console.log('Metrics gathered from clover file:', metrics.attributes);
-
-    return { total, covered, coverage };
+    return {
+        overall: extractCoverageFromMetricsElement(retrieveGlobalMetricsElement(json)),
+        detailed: extractDetailedCoverages(json)
+    };
 }
 
 const parseCoverages = async (coverageFiles) => {
@@ -47,6 +86,16 @@ const retrieveBaseCoverage = async (summaryFile, coverageBranch) => {
     return await baseCoverageResult.json();
 }
 
+const retrieveBaseDetailedCoverages = async (summaryFile, coverageBranch) => {
+    const baseDetailedCoveragesResult = await fetchBaseDetailedCoverages(summaryFile, coverageBranch);
+
+    if (baseDetailedCoveragesResult.status === 404) {
+        return null;
+    }
+
+    return await baseDetailedCoveragesResult.json();
+}
+
 const retrieveHistory = async (coverageBranch, historyFilename) => {
     const historyFile = await fetchHistory(coverageBranch, historyFilename);
 
@@ -69,4 +118,4 @@ const sumCoverages = coverages => {
     return out;
 }
 
-export { parseCoverages, retrieveBaseCoverage, retrieveHistory, sumCoverages };
+export { compareDetailedCoverages, parseCoverages, retrieveBaseCoverage, retrieveBaseDetailedCoverages, retrieveHistory, sumCoverages };

@@ -11,6 +11,8 @@ const getFromGithub = (url) => fetch(url, {
 
 const fetchBaseCoverage = (summaryFile, coverageBranch) => getFromGithub(`https://raw.githubusercontent.com/${process.env.GITHUB_REPOSITORY}/${coverageBranch}/${summaryFile}`);
 
+const fetchBaseDetailedCoverages = (summaryFile, coverageBranch) => getFromGithub(`https://raw.githubusercontent.com/${process.env.GITHUB_REPOSITORY}/${coverageBranch}/detailed-${summaryFile}`);
+
 const fetchHistory = (coverageBranch, historyFilename) => getFromGithub(`https://raw.githubusercontent.com/${process.env.GITHUB_REPOSITORY}/${coverageBranch}/${historyFilename}`);
 
-export { fetchHistory, fetchBaseCoverage };
+export { fetchBaseCoverage, fetchBaseDetailedCoverages, fetchHistory };
