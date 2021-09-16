@@ -415,7 +415,7 @@ const buildDetailedDiffMessage = (detailedDiff) => {
         out += ':red_circle: :arrow_lower_right: Degraded files: \n' + buildDetailedDiffTable(detailedDiff.degraded);
     }
 
-    return out + '/n';
+    return out + '\n';
 };
 
 const buildFailureMessage = (oldCoverage, newCoverage, detailedDiff) => {
