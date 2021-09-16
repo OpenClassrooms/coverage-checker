@@ -1,6 +1,396 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ 7979:
+/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+__nccwpck_require__.r(__webpack_exports__);
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "check": () => (/* binding */ check),
+/* harmony export */   "update": () => (/* binding */ update)
+/* harmony export */ });
+const fs = __nccwpck_require__(5747);
+const { generateBadge } = __nccwpck_require__ (4721);
+const { retrieveBaseCoverage, retrieveHistory, sumCoverages } = __nccwpck_require__(3306);
+const { clone, push } = __nccwpck_require__(7803);
+const { buildResultMessage, postMessageOnPullRequest } = __nccwpck_require__ (430);
+
+const check = async (coverages, coverageBranch, coverageFiles, reportMessageHeader) => {
+    const baseCoverages = {};
+    const messages = [];
+
+    for (const summaryFile of Object.keys(coverages)) {
+        const baseCoverageResult = await retrieveBaseCoverage(summaryFile, coverageBranch);
+        const coverage = coverages[summaryFile];
+
+        if (baseCoverageResult === null) {
+            console.log(`No base coverage ${summaryFile} found. Current coverage is ${coverage.coverage}% (${coverage.total} lines, ${coverage.covered} covered)`);
+            continue;
+        }
+
+        baseCoverages[summaryFile] = baseCoverageResult;
+
+        messages.push('*' + coverageFiles.find(e => e.summary === summaryFile).label + '* \n\n' + buildResultMessage(baseCoverages[summaryFile], coverage));
+    }
+
+    if (Object.keys(coverages).length > 1) {
+        const globalBaseCoverage = sumCoverages(baseCoverages);
+        const globalCoverage = sumCoverages(coverages);
+
+        messages.push('*Global* \n\n' + buildResultMessage(globalBaseCoverage, globalCoverage));
+    }
+
+    await postMessageOnPullRequest(messages.join('\n---\n'), reportMessageHeader);
+};
+
+const update = async (coverages, coverageBranch, repository, historyFilename, coverageFiles) => {
+    console.log('Updating base coverage...');
+    const workingDir = await clone(coverageBranch, repository);
+    const history = await retrieveHistory(coverageBranch, historyFilename);
+
+    for (const summaryFile of Object.keys(coverages)) {
+        const conf = coverageFiles.find(e => e.summary === summaryFile);
+
+        console.log(`Writing ${summaryFile} report (${workingDir}/${summaryFile})`);
+        fs.writeFileSync(`${workingDir}/${summaryFile}`, JSON.stringify(coverages[summaryFile]));
+
+        if (conf.badge) {
+            await generateBadge(coverages[summaryFile].coverage, conf.label, conf.badge, workingDir);
+        }
+
+        if (typeof history[conf.label] === 'undefined') {
+            history[conf.label] = [];
+        }
+
+        history[conf.label].push({
+            time: (new Date()).toISOString(),
+            coverage: coverages[summaryFile].coverage
+        });
+    }
+    fs.writeFileSync(`${workingDir}/${historyFilename}`, JSON.stringify(history));
+
+    console.log('Pushing to coverage branch');
+    await push(workingDir, repository);
+
+    console.log('Coverage successfully updated');
+};
+
+
+
+
+/***/ }),
+
+/***/ 4721:
+/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+__nccwpck_require__.r(__webpack_exports__);
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "generateBadge": () => (/* binding */ generateBadge)
+/* harmony export */ });
+const fetch = __nccwpck_require__(8534);
+const fs = __nccwpck_require__(5747);
+
+const processBadgeColor = (coverage) => {
+    const colors = [
+        { threshold: 50, color: 'red' },
+        { threshold: 75, color: 'orange' },
+        { threshold: 95, color: 'yellow' }
+    ];
+
+    for (let i = 0 ; i < colors.length ; i++) {
+        if (coverage < colors[i].threshold) {
+            return colors[i].color;
+        }
+    }
+
+    return 'green';
+}
+
+const getBadgeUrl = (coverage, label) => `https://img.shields.io/static/v1?label=${encodeURIComponent(label)}&message=${encodeURIComponent(coverage)}%25&color=${processBadgeColor(coverage)}&style=for-the-badge`;
+
+const generateBadge = async (coverageValue, label, badgeFilename, workingDir) => {
+    const badgeContent = await fetch(getBadgeUrl(coverageValue, label));
+
+    fs.writeFileSync(`${workingDir}/${badgeFilename}`, await badgeContent.text());
+}
+
+
+
+
+/***/ }),
+
+/***/ 2148:
+/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+__nccwpck_require__.r(__webpack_exports__);
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "execute": () => (/* binding */ execute),
+/* harmony export */   "fail": () => (/* binding */ fail)
+/* harmony export */ });
+const core = __nccwpck_require__(5127);
+const process = __nccwpck_require__(1765);
+const { exec } = __nccwpck_require__(3129);
+
+const fail = (message) => {
+    core.setFailed(message);
+    console.error(message);
+    process.exit(-1);
+};
+
+const execute = (command, options) => new Promise(function (resolve, reject) {
+    const cb = (error, stdout) => {
+        if (error) {
+            fail(error);
+            reject(error);
+
+            return;
+        }
+
+        resolve(stdout.trim());
+    };
+
+    if (!!options) {
+        exec(command, options, cb);
+    } else {
+        exec(command, cb);
+    }
+});
+
+
+
+
+/***/ }),
+
+/***/ 3306:
+/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+__nccwpck_require__.r(__webpack_exports__);
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "parseCoverages": () => (/* binding */ parseCoverages),
+/* harmony export */   "retrieveBaseCoverage": () => (/* binding */ retrieveBaseCoverage),
+/* harmony export */   "retrieveHistory": () => (/* binding */ retrieveHistory),
+/* harmony export */   "sumCoverages": () => (/* binding */ sumCoverages)
+/* harmony export */ });
+const convert = __nccwpck_require__(2954);
+const fs = __nccwpck_require__(5747);
+const glob = __nccwpck_require__(916);
+const { fail } = __nccwpck_require__(2148);
+const { fetchBaseCoverage, fetchHistory } = __nccwpck_require__(6857);
+const { retrieveGlobalMetricsElement } = __nccwpck_require__(8853);
+
+const parseCoverage = async (file) => {
+    const globber = await glob.create(file);
+    const files = await globber.glob();
+
+    if (files.length === 0) {
+        fail('Coverage file not found :/');
+    }
+
+    const options = {ignoreComment: true, alwaysChildren: true};
+    const json = convert.xml2js(fs.readFileSync(files[0], {encoding: 'utf8'}), options);
+    const metrics = retrieveGlobalMetricsElement(json);
+    const total = parseInt(metrics.attributes.elements, 10);
+    const covered = parseInt(metrics.attributes.coveredelements, 10);
+    const coverage = parseFloat((100 * covered / total).toFixed(3));
+
+    console.log('Metrics gathered from clover file:', metrics.attributes);
+
+    return { total, covered, coverage };
+}
+
+const parseCoverages = async (coverageFiles) => {
+    const reports = {};
+
+    for (const file of coverageFiles) {
+        console.log(`Parsing ${file.coverage}...`);
+        reports[file.summary] = await parseCoverage(file.coverage);
+        console.log(`Parsed ${file.coverage}`);
+    }
+
+    return reports;
+};
+
+const retrieveBaseCoverage = async (summaryFile, coverageBranch) => {
+    const baseCoverageResult = await fetchBaseCoverage(summaryFile, coverageBranch);
+
+    if (baseCoverageResult.status === 404) {
+        return null;
+    }
+
+    return await baseCoverageResult.json();
+}
+
+const retrieveHistory = async (coverageBranch, historyFilename) => {
+    const historyFile = await fetchHistory(coverageBranch, historyFilename);
+
+    return historyFile.status === 200 ? (await historyFile.json()) : {};
+};
+
+const sumCoverages = coverages => {
+    const out = {
+        total: 0,
+        covered: 0
+    };
+
+    for (const coverage of Object.values(coverages)) {
+        out.total += coverage.total;
+        out.covered += coverage.covered;
+    }
+
+    out.coverage = parseFloat((100 * out.covered / out.total).toFixed(3));
+
+    return out;
+}
+
+
+
+
+/***/ }),
+
+/***/ 7803:
+/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+__nccwpck_require__.r(__webpack_exports__);
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "clone": () => (/* binding */ clone),
+/* harmony export */   "push": () => (/* binding */ push)
+/* harmony export */ });
+const { execute } = __nccwpck_require__(2148);
+
+const clone = async (coverageBranch, repository) => {
+    const cloneInto = `repo-${new Date().getTime()}`;
+
+    console.log(`Cloning repository in ${cloneInto}`);
+    await execute(`git clone ${repository} ${cloneInto}`);
+
+    console.log(`Retrieving existing branches`);
+    const list = await execute(`git branch -a`, { cwd: cloneInto });
+    const branches = list.split('\n').filter(b => b.length > 2).map(b => b.replace('remotes/origin/', '').trim());
+
+    if (branches.includes(coverageBranch)) {
+        console.log(`Coverage branch exists. Checking it out.`);
+        await execute(`git checkout ${coverageBranch}`, { cwd: cloneInto });
+        await execute(`git pull`, { cwd: cloneInto });
+    } else {
+        console.log(`Coverage branch does not exist. Creating it.`);
+        await execute(`git checkout --orphan ${coverageBranch}`, { cwd: cloneInto });
+        await execute(`rm -rf .`, { cwd: cloneInto });
+    }
+
+    return cloneInto;
+};
+
+const push = async (cwd, repo) => {
+    await execute('git config --local user.email zozor@openclassrooms.com', { cwd });
+    await execute('git config --local user.name Zozor', { cwd });
+    await execute('git add .', { cwd });
+    await execute('git commit -m "Update coverage info" --allow-empty', { cwd });
+    await execute(`git push ${repo} HEAD`, { cwd });
+};
+
+
+
+
+/***/ }),
+
+/***/ 430:
+/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+__nccwpck_require__.r(__webpack_exports__);
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "buildResultMessage": () => (/* binding */ buildResultMessage),
+/* harmony export */   "postMessageOnPullRequest": () => (/* binding */ postMessageOnPullRequest)
+/* harmony export */ });
+const core = __nccwpck_require__(5127);
+const github = __nccwpck_require__(3134);
+const process = __nccwpck_require__(1765);
+
+const buildDeltaMessage = (oldCoverage, newCoverage) => {
+    return [
+        '',
+        '| Measure | Main branch | ' + process.env.GITHUB_REF + ' |',
+        '| --- | --- | --- |',
+        '| Coverage | ' + oldCoverage.coverage + '% | ' + newCoverage.coverage + '% |',
+        '| Total lines | ' + oldCoverage.total + ' | ' + newCoverage.total + ' |',
+        '| Covered lines | ' + oldCoverage.covered + ' | ' + newCoverage.covered + ' |',
+        '',
+        '∆ ' + (newCoverage.coverage - oldCoverage.coverage).toFixed(3),
+        ''
+    ].join('\n');
+}
+
+const buildFailureMessage = (oldCoverage, newCoverage) => {
+    return ':x: Your code coverage has been degraded :sob:' + buildDeltaMessage(oldCoverage, newCoverage);
+};
+
+const buildSuccessMessage = (oldCoverage, newCoverage) => {
+    return ':white_check_mark: Your code coverage has not been degraded :tada:' + buildDeltaMessage(oldCoverage, newCoverage);
+};
+
+const buildResultMessage = (oldCoverage, newCoverage) => {
+    if (newCoverage.coverage < oldCoverage.coverage) {
+        core.setFailed('Code coverage has been degraded');
+
+        return buildFailureMessage(oldCoverage, newCoverage);
+    }
+
+    return buildSuccessMessage(oldCoverage, newCoverage);
+}
+
+const postMessageOnPullRequest = async (message, header) => {
+    const context = github.context;
+
+    console.log(message);
+
+    if (context.payload.pull_request == null) {
+        return;
+    }
+
+    const body = header + '\n\n' + message;
+
+    const pullRequestNumber = context.payload.pull_request.number;
+    const octokit = new github.getOctokit(core.getInput('token'));
+
+    const commentId = await retrieveCommentIdFromPullRequest(context, octokit, header);
+
+    if (commentId !== null) {
+        await octokit.issues.updateComment({
+            ...context.repo,
+            body,
+            comment_id: commentId
+        });
+    } else {
+        await octokit.issues.createComment({
+            ...context.repo,
+            body,
+            issue_number: pullRequestNumber
+        });
+    }
+};
+
+const retrieveCommentIdFromPullRequest = async (context, octokit, header) => {
+    const pullRequestNumber = context.payload.pull_request.number;
+
+    const { data: comments } = await octokit.issues.listComments({
+        ...context.repo,
+        issue_number: pullRequestNumber
+    });
+    const comment = comments.find(comment => comment.user.login === 'github-actions[bot]' && comment.body.startsWith(header));
+
+    return comment ? comment.id : null;
+};
+
+
+
+
+/***/ }),
+
 /***/ 5604:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -728,7 +1118,7 @@ const fs = __importStar(__nccwpck_require__(5747));
 const globOptionsHelper = __importStar(__nccwpck_require__(6935));
 const path = __importStar(__nccwpck_require__(5622));
 const patternHelper = __importStar(__nccwpck_require__(455));
-const internal_match_kind_1 = __nccwpck_require__(5906);
+const internal_match_kind_1 = __nccwpck_require__(7081);
 const internal_pattern_1 = __nccwpck_require__(7919);
 const internal_search_state_1 = __nccwpck_require__(2973);
 const IS_WINDOWS = process.platform === 'win32';
@@ -911,7 +1301,7 @@ exports.DefaultGlobber = DefaultGlobber;
 
 /***/ }),
 
-/***/ 5906:
+/***/ 7081:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -1248,7 +1638,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const pathHelper = __importStar(__nccwpck_require__(3131));
-const internal_match_kind_1 = __nccwpck_require__(5906);
+const internal_match_kind_1 = __nccwpck_require__(7081);
 const IS_WINDOWS = process.platform === 'win32';
 /**
  * Given an array of patterns, returns an array of paths to search.
@@ -1343,7 +1733,7 @@ const path = __importStar(__nccwpck_require__(5622));
 const pathHelper = __importStar(__nccwpck_require__(3131));
 const assert_1 = __importDefault(__nccwpck_require__(2357));
 const minimatch_1 = __nccwpck_require__(6930);
-const internal_match_kind_1 = __nccwpck_require__(5906);
+const internal_match_kind_1 = __nccwpck_require__(7081);
 const internal_path_1 = __nccwpck_require__(1012);
 const IS_WINDOWS = process.platform === 'win32';
 class Pattern {
@@ -2262,7 +2652,7 @@ exports.createTokenAuth = createTokenAuth;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 
-var universalUserAgent = __nccwpck_require__(7081);
+var universalUserAgent = __nccwpck_require__(6732);
 var beforeAfterHook = __nccwpck_require__(3108);
 var request = __nccwpck_require__(3986);
 var graphql = __nccwpck_require__(1463);
@@ -2446,7 +2836,7 @@ exports.Octokit = Octokit;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 
 var isPlainObject = __nccwpck_require__(3032);
-var universalUserAgent = __nccwpck_require__(7081);
+var universalUserAgent = __nccwpck_require__(6732);
 
 function lowercaseKeys(object) {
   if (!object) {
@@ -2844,7 +3234,7 @@ exports.endpoint = endpoint;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 
 var request = __nccwpck_require__(3986);
-var universalUserAgent = __nccwpck_require__(7081);
+var universalUserAgent = __nccwpck_require__(6732);
 
 const VERSION = "4.6.1";
 
@@ -4422,7 +4812,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
 var endpoint = __nccwpck_require__(2995);
-var universalUserAgent = __nccwpck_require__(7081);
+var universalUserAgent = __nccwpck_require__(6732);
 var isPlainObject = __nccwpck_require__(3032);
 var nodeFetch = _interopDefault(__nccwpck_require__(8534));
 var requestError = __nccwpck_require__(3190);
@@ -9606,7 +9996,7 @@ exports.debug = debug; // for test
 
 /***/ }),
 
-/***/ 7081:
+/***/ 6732:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -10510,6 +10900,66 @@ module.exports = function(xml, userOptions) {
 
 /***/ }),
 
+/***/ 6857:
+/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+__nccwpck_require__.r(__webpack_exports__);
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "fetchHistory": () => (/* binding */ fetchHistory),
+/* harmony export */   "fetchBaseCoverage": () => (/* binding */ fetchBaseCoverage)
+/* harmony export */ });
+const core = __nccwpck_require__(5127);
+const fetch = __nccwpck_require__(8534);
+const process = __nccwpck_require__(1765);
+
+const getFromGithub = (url) => fetch(url, {
+    headers: {
+        'Authorization': `token ${core.getInput('token')}`,
+        'Accept': 'application/vnd.github.v3.raw'
+    }
+});
+
+const fetchBaseCoverage = (summaryFile, coverageBranch) => getFromGithub(`https://raw.githubusercontent.com/${process.env.GITHUB_REPOSITORY}/${coverageBranch}/${summaryFile}`);
+
+const fetchHistory = (coverageBranch, historyFilename) => getFromGithub(`https://raw.githubusercontent.com/${process.env.GITHUB_REPOSITORY}/${coverageBranch}/${historyFilename}`);
+
+
+
+
+/***/ }),
+
+/***/ 8853:
+/***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
+
+"use strict";
+__nccwpck_require__.r(__webpack_exports__);
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   "retrieveGlobalMetricsElement": () => (/* binding */ retrieveGlobalMetricsElement)
+/* harmony export */ });
+const { fail } = __nccwpck_require__(2148);
+
+const findNode = (tree, name) => {
+    if (!tree.elements) {
+        fail('Wrong coverage file format');
+    }
+
+    const element = tree.elements.find(e => e.name === name);
+
+    if (!element) {
+        fail('Wrong coverage file format');
+    }
+
+    return element;
+}
+
+const retrieveGlobalMetricsElement = json => findNode(findNode(findNode(json, 'coverage'), 'project'), 'metrics');
+
+
+
+
+/***/ }),
+
 /***/ 2431:
 /***/ ((module) => {
 
@@ -10679,6 +11129,34 @@ module.exports = require("zlib");;
 /******/ 	}
 /******/ 	
 /************************************************************************/
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__nccwpck_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__nccwpck_require__.o(definition, key) && !__nccwpck_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__nccwpck_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__nccwpck_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
 /******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";/************************************************************************/
@@ -10686,320 +11164,29 @@ var __webpack_exports__ = {};
 // This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
 (() => {
 const core = __nccwpck_require__(5127);
-const github = __nccwpck_require__(3134);
-const glob = __nccwpck_require__(916);
-const {exec} = __nccwpck_require__(3129);
-const fs = __nccwpck_require__(5747);
-const fetch = __nccwpck_require__(8534);
 const process = __nccwpck_require__(1765);
-const convert = __nccwpck_require__(2954);
+const { check, update } = __nccwpck_require__(7979);
+const { fail } = __nccwpck_require__(2148);
+const { parseCoverages } = __nccwpck_require__(3306);
 
 const ACTION = core.getInput('action');
 const COVERAGE_BRANCH = 'coverage';
 const COVERAGE_FILES = JSON.parse(core.getInput('files'));
-const TOKEN = core.getInput('token');
-const REPO = `https://${process.env.GITHUB_ACTOR}:${TOKEN}@github.com/${process.env.GITHUB_REPOSITORY}.git`;
+const REPO = `https://${process.env.GITHUB_ACTOR}:${core.getInput('token')}@github.com/${process.env.GITHUB_REPOSITORY}.git`;
 const HISTORY_FILENAME = 'coverage-history.json';
 const REPORT_MESSAGE_HEADER = 'Issued by Coverage Checker:';
-
-const fail = (message) => {
-    core.setFailed(message);
-    console.error(message);
-    process.exit(-1);
-};
-
-const execute = (command, options) => new Promise(function (resolve, reject) {
-    const cb = (error, stdout, stderr) => {
-        if (error) {
-            core.setFailed(error);
-            reject(error);
-
-            return;
-        }
-
-        resolve(stdout.trim());
-    };
-
-    if (!!options) {
-        exec(command, options, cb);
-    } else {
-        exec(command, cb);
-    }
-});
-
-const findNode = (tree, name) => {
-    if (!tree.elements) {
-        fail('Wrong coverage file format');
-    }
-
-    const element = tree.elements.find(e => e.name === name);
-
-    if (!element) {
-        fail('Wrong coverage file format');
-    }
-
-    return element;
-}
-
-const retrieveGlobalMetricsElement = json => findNode(findNode(findNode(json, 'coverage'), 'project'), 'metrics');
-
-const clone = async () => {
-    const cloneInto = `repo-${new Date().getTime()}`;
-
-    console.log(`Cloning repository in ${cloneInto}`);
-    await execute(`git clone ${REPO} ${cloneInto}`);
-
-    console.log(`Retrieving existing branches`);
-    const list = await execute(`git branch -a`, {cwd: cloneInto});
-    const branches = list.split('\n').filter(b => b.length > 2).map(b => b.replace('remotes/origin/', '').trim());
-
-    if (branches.includes(COVERAGE_BRANCH)) {
-        console.log(`Coverage branch exists. Checking it out.`);
-        await execute(`git checkout ${COVERAGE_BRANCH}`, {cwd: cloneInto});
-        await execute(`git pull`, {cwd: cloneInto});
-    } else {
-        console.log(`Coverage branch does not exist. Creating it.`);
-        await execute(`git checkout --orphan ${COVERAGE_BRANCH}`, {cwd: cloneInto});
-        await execute(`rm -rf .`, {cwd: cloneInto});
-    }
-
-    return cloneInto;
-};
-
-const push = async (cwd) => {
-    await execute('git config --local user.email zozor@openclassrooms.com', {cwd});
-    await execute('git config --local user.name Zozor', {cwd});
-    await execute('git add .', {cwd});
-    await execute('git commit -m "Update coverage info" --allow-empty', {cwd});
-    await execute(`git push ${REPO} HEAD`, {cwd});
-};
-
-const parseCoverage = async file => {
-    const globber = await glob.create(file);
-    const files = await globber.glob();
-
-    if (files.length === 0) {
-        fail('Coverage file not found :/');
-    }
-
-    const options = {ignoreComment: true, alwaysChildren: true};
-    const json = convert.xml2js(fs.readFileSync(files[0], {encoding: 'utf8'}), options);
-    const metrics = retrieveGlobalMetricsElement(json);
-    const total = parseInt(metrics.attributes.elements, 10);
-    const covered = parseInt(metrics.attributes.coveredelements, 10);
-    const coverage = parseFloat((100 * covered / total).toFixed(3));
-
-    console.log('Metrics gathered from clover file:', metrics.attributes);
-
-    return { total, covered, coverage };
-}
-
-const parseCoverages = async () => {
-    const reports = {};
-
-    for (const file of COVERAGE_FILES) {
-        console.log(`Parsing ${file.coverage}...`);
-        reports[file.summary] = await parseCoverage(file.coverage);
-        console.log(`Parsed ${file.coverage}`);
-    }
-
-    return reports;
-};
-
-const fetchBaseCoverage = summaryFile => fetch(`https://raw.githubusercontent.com/${process.env.GITHUB_REPOSITORY}/${COVERAGE_BRANCH}/${summaryFile}`, {
-    headers: {
-        'Authorization': `token ${TOKEN}`,
-        'Accept': 'application/vnd.github.v3.raw'
-    }
-});
-
-const fetchHistory = () => fetch(`https://raw.githubusercontent.com/${process.env.GITHUB_REPOSITORY}/${COVERAGE_BRANCH}/${HISTORY_FILENAME}`, {
-    headers: {
-        'Authorization': `token ${TOKEN}`,
-        'Accept': 'application/vnd.github.v3.raw'
-    }
-});
-
-const sumCoverages = coverages => {
-    const out = {
-        total: 0,
-        covered: 0
-    };
-
-    for (const coverage of Object.values(coverages)) {
-        out.total += coverage.total;
-        out.covered += coverage.covered;
-    }
-
-    out.coverage = parseFloat((100 * out.covered / out.total).toFixed(3));
-
-    return out;
-}
-
-const getBadgeUrl = (coverage, label) => `https://img.shields.io/static/v1?label=${encodeURIComponent(label)}&message=${encodeURIComponent(coverage)}%25&color=${processBadgeColor(coverage)}&style=for-the-badge`;
-
-const processBadgeColor = coverage => {
-    const colors = [
-        { threshold: 50, color: 'red' },
-        { threshold: 75, color: 'orange' },
-        { threshold: 95, color: 'yellow' }
-    ];
-
-    for (let i = 0 ; i < colors.length ; i++) {
-        if (coverage < colors[i].threshold) {
-            return colors[i].color;
-        }
-    }
-
-    return 'green';
-}
-
-const postMessageOnPullRequest = async message => {
-    const context = github.context;
-
-    console.log(message);
-
-    if (context.payload.pull_request == null) {
-        return;
-    }
-
-    const body = REPORT_MESSAGE_HEADER + '\n\n' + message;
-
-    const pullRequestNumber = context.payload.pull_request.number;
-    const octokit = new github.getOctokit(TOKEN);
-
-    const commentId = await retrieveCommentIdFromPullRequest(context, octokit);
-
-    if (commentId !== null) {
-        await octokit.issues.updateComment({
-           ...context.repo,
-           body,
-           comment_id: commentId
-        });
-    } else {
-        await octokit.issues.createComment({
-           ...context.repo,
-           body,
-           issue_number: pullRequestNumber
-        });
-    }
-};
-
-const retrieveCommentIdFromPullRequest = async (context, octokit) => {
-    const pullRequestNumber = context.payload.pull_request.number;
-
-    const { data: comments } = await octokit.issues.listComments({
-       ...context.repo,
-       issue_number: pullRequestNumber
-    });
-    const comment = comments.find(comment => comment.user.login === 'github-actions[bot]' && comment.body.startsWith(REPORT_MESSAGE_HEADER));
-
-    return comment ? comment.id : null;
-};
-
-const buildDeltaMessage = (oldCoverage, newCoverage) => {
-    return [
-        '',
-        '| Measure | Main branch | ' + process.env.GITHUB_REF + ' |',
-        '| --- | --- | --- |',
-        '| Coverage | ' + oldCoverage.coverage + '% | ' + newCoverage.coverage + '% |',
-        '| Total lines | ' + oldCoverage.total + ' | ' + newCoverage.total + ' |',
-        '| Covered lines | ' + oldCoverage.covered + ' | ' + newCoverage.covered + ' |',
-        '',
-        '∆ ' + (newCoverage.coverage - oldCoverage.coverage).toFixed(3),
-        ''
-    ].join('\n');
-}
-
-const buildFailureMessage = (oldCoverage, newCoverage) => {
-    return ':x: Your code coverage has been degraded :sob:' + buildDeltaMessage(oldCoverage, newCoverage);
-};
-
-const buildSuccessMessage = (oldCoverage, newCoverage) => {
-    return ':white_check_mark: Your code coverage has not been degraded :tada:' + buildDeltaMessage(oldCoverage, newCoverage);
-};
-
-const buildResultMessage = (oldCoverage, newCoverage) => {
-    if (newCoverage.coverage < oldCoverage.coverage) {
-        core.setFailed('Code coverage has been degraded');
-
-        return buildFailureMessage(oldCoverage, newCoverage);
-    }
-
-    return buildSuccessMessage(oldCoverage, newCoverage);
-}
-
-const update = async coverages => {
-    console.log('Updating base coverage...');
-    const workingDir = await clone();
-    const historyFile = await fetchHistory();
-    const history = historyFile.status === 200 ? (await historyFile.json()) : {};
-
-    for (const summaryFile of Object.keys(coverages)) {
-        const conf = COVERAGE_FILES.find(e => e.summary === summaryFile);
-
-        console.log(`Writing ${summaryFile} report (${workingDir}/${summaryFile})`);
-        fs.writeFileSync(`${workingDir}/${summaryFile}`, JSON.stringify(coverages[summaryFile]));
-
-        if (conf.badge) {
-            const badgeContent = await fetch(getBadgeUrl(coverages[summaryFile].coverage, conf.label));
-
-            fs.writeFileSync(`${workingDir}/${conf.badge}`, await badgeContent.text());
-        }
-
-        if (typeof history[conf.label] === 'undefined') {
-            history[conf.label] = [];
-        }
-
-        history[conf.label].push({
-            time: (new Date()).toISOString(),
-            coverage: coverages[summaryFile].coverage
-        });
-    }
-    fs.writeFileSync(`${workingDir}/${HISTORY_FILENAME}`, JSON.stringify(history));
-
-    console.log('Pushing to coverage branch');
-    await push(workingDir);
-
-    console.log('Coverage successfully updated');
-};
-
-const check = async coverages => {
-    const baseCoverages = {};
-    const messages = [];
-
-    for (const summaryFile of Object.keys(coverages)) {
-        const baseCoverageResult = await fetchBaseCoverage(summaryFile);
-        const coverage = coverages[summaryFile];
-
-        if (baseCoverageResult.status === 404) {
-            console.log(`No base coverage ${summaryFile} found. Current coverage is ${coverage.coverage}% (${coverage.total} lines, ${coverage.covered} covered)`);
-            continue;
-        }
-
-        baseCoverages[summaryFile] = await baseCoverageResult.json();
-
-        messages.push('*' + COVERAGE_FILES.find(e => e.summary === summaryFile).label + '* \n\n' + buildResultMessage(baseCoverages[summaryFile], coverage));
-    }
-
-    if (Object.keys(coverages).length > 1) {
-        const globalBaseCoverage = sumCoverages(baseCoverages);
-        const globalCoverage = sumCoverages(coverages);
-
-        messages.push('*Global* \n\n' + buildResultMessage(globalBaseCoverage, globalCoverage));
-    }
-
-    await postMessageOnPullRequest(messages.join('\n---\n'));
-};
 
 const action = async () => {
     try {
         console.log('Parsing clover files...')
-        const coverages = await parseCoverages();
+        const coverages = await parseCoverages(COVERAGE_FILES);
 
-        await (ACTION === 'update' ? update(coverages) : check(coverages));
+        await (ACTION === 'update'
+            ? update(coverages, COVERAGE_BRANCH, REPO, HISTORY_FILENAME, COVERAGE_FILES)
+            : check(coverages, COVERAGE_BRANCH, COVERAGE_FILES, REPORT_MESSAGE_HEADER)
+        );
     } catch (error) {
-        core.setFailed(error.message);
+        fail(error.message);
     }
 };
 
