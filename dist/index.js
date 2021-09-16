@@ -16,12 +16,12 @@ const { retrieveBaseCoverage, retrieveHistory, sumCoverages } = __nccwpck_requir
 const { clone, push } = __nccwpck_require__(7803);
 const { buildResultMessage, postMessageOnPullRequest } = __nccwpck_require__ (430);
 
-const check = async (coverages, coverageFiles, reportMessageHeader) => {
+const check = async (coverages, coverageBranch, coverageFiles, reportMessageHeader) => {
     const baseCoverages = {};
     const messages = [];
 
     for (const summaryFile of Object.keys(coverages)) {
-        const baseCoverageResult = await retrieveBaseCoverage(summaryFile);
+        const baseCoverageResult = await retrieveBaseCoverage(summaryFile, coverageBranch);
         const coverage = coverages[summaryFile];
 
         if (baseCoverageResult === null) {
@@ -214,8 +214,8 @@ const parseCoverages = async (coverageFiles) => {
     return reports;
 };
 
-const retrieveBaseCoverage = async (summaryFile) => {
-    const baseCoverageResult = await fetchBaseCoverage(summaryFile);
+const retrieveBaseCoverage = async (summaryFile, coverageBranch) => {
+    const baseCoverageResult = await fetchBaseCoverage(summaryFile, coverageBranch);
 
     if (baseCoverageResult.status === 404) {
         return null;
@@ -11183,7 +11183,7 @@ const action = async () => {
 
         await (ACTION === 'update'
             ? update(coverages, COVERAGE_BRANCH, REPO, HISTORY_FILENAME, COVERAGE_FILES)
-            : check(coverages, COVERAGE_FILES, REPORT_MESSAGE_HEADER)
+            : check(coverages, COVERAGE_BRANCH, COVERAGE_FILES, REPORT_MESSAGE_HEADER)
         );
     } catch (error) {
         fail(error.message);

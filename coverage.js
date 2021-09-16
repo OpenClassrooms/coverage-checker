@@ -37,8 +37,8 @@ const parseCoverages = async (coverageFiles) => {
     return reports;
 };
 
-const retrieveBaseCoverage = async (summaryFile) => {
-    const baseCoverageResult = await fetchBaseCoverage(summaryFile);
+const retrieveBaseCoverage = async (summaryFile, coverageBranch) => {
+    const baseCoverageResult = await fetchBaseCoverage(summaryFile, coverageBranch);
 
     if (baseCoverageResult.status === 404) {
         return null;

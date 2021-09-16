@@ -18,7 +18,7 @@ const action = async () => {
 
         await (ACTION === 'update'
             ? update(coverages, COVERAGE_BRANCH, REPO, HISTORY_FILENAME, COVERAGE_FILES)
-            : check(coverages, COVERAGE_FILES, REPORT_MESSAGE_HEADER)
+            : check(coverages, COVERAGE_BRANCH, COVERAGE_FILES, REPORT_MESSAGE_HEADER)
         );
     } catch (error) {
         fail(error.message);

@@ -4,12 +4,12 @@ const { retrieveBaseCoverage, retrieveHistory, sumCoverages } = require('./cover
 const { clone, push } = require('./git');
 const { buildResultMessage, postMessageOnPullRequest } = require ('./message');
 
-const check = async (coverages, coverageFiles, reportMessageHeader) => {
+const check = async (coverages, coverageBranch, coverageFiles, reportMessageHeader) => {
     const baseCoverages = {};
     const messages = [];
 
     for (const summaryFile of Object.keys(coverages)) {
-        const baseCoverageResult = await retrieveBaseCoverage(summaryFile);
+        const baseCoverageResult = await retrieveBaseCoverage(summaryFile, coverageBranch);
         const coverage = coverages[summaryFile];
 
         if (baseCoverageResult === null) {
