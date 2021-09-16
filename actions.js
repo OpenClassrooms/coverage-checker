@@ -24,7 +24,7 @@ const check = async (coverages, coverageBranch, coverageFiles, reportMessageHead
         newOverallCoverages[summaryFile] = newOverallCoverage;
         baseOverallCoverages[summaryFile] = baseOverallCoverageResult;
 
-        const detailedDiff = baseDetailedCoverageResult === null ? null : compareDetailedCoverages(baseDetailedCoverageResult, coverages[summaryFile].detailed);
+        const detailedDiff = (baseDetailedCoverageResult === null) ? null : compareDetailedCoverages(baseDetailedCoverageResult, coverages[summaryFile].detailed);
 
         messages.push('*' + coverageFiles.find(e => e.summary === summaryFile).label + '* \n\n' + buildResultMessage(baseOverallCoverages[summaryFile], newOverallCoverage, detailedDiff));
     }

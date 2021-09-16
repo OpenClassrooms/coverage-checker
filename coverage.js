@@ -12,12 +12,16 @@ const compareDetailedCoverages = (oldCoverages, newCoverages) => {
     };
 
     for (const filename of Object.keys(oldCoverages)) {
-        if (typeof newCoverages[filename] === 'undefined' || newCoverages[filename].coverage === oldCoverages[filename].coverage) {
+        if (
+            typeof newCoverages[filename] === 'undefined' ||
+            oldCoverages[filename].coverage === null ||
+            newCoverages[filename].coverage === oldCoverages[filename].coverage
+        ) {
             continue;
         }
 
-        const oldCoverage = Number(oldCoverages[filename].coverage);
-        const newCoverage = Number(newCoverages[filename].coverage);
+        const oldCoverage = Number(oldCoverages[filename].coverage).valueOf();
+        const newCoverage = Number(newCoverages[filename].coverage).valueOf();
 
         out[newCoverage < oldCoverage ? 'degraded' : 'improved'].push({
             filename,

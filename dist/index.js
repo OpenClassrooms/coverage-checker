@@ -37,7 +37,7 @@ const check = async (coverages, coverageBranch, coverageFiles, reportMessageHead
         newOverallCoverages[summaryFile] = newOverallCoverage;
         baseOverallCoverages[summaryFile] = baseOverallCoverageResult;
 
-        const detailedDiff = baseDetailedCoverageResult === null ? null : (0,_coverage__WEBPACK_IMPORTED_MODULE_0__.compareDetailedCoverages)(baseDetailedCoverageResult, coverages[summaryFile].detailed);
+        const detailedDiff = (baseDetailedCoverageResult === null) ? null : (0,_coverage__WEBPACK_IMPORTED_MODULE_0__.compareDetailedCoverages)(baseDetailedCoverageResult, coverages[summaryFile].detailed);
 
         messages.push('*' + coverageFiles.find(e => e.summary === summaryFile).label + '* \n\n' + buildResultMessage(baseOverallCoverages[summaryFile], newOverallCoverage, detailedDiff));
     }
@@ -200,12 +200,16 @@ const compareDetailedCoverages = (oldCoverages, newCoverages) => {
     };
 
     for (const filename of Object.keys(oldCoverages)) {
-        if (typeof newCoverages[filename] === 'undefined' || newCoverages[filename].coverage === oldCoverages[filename].coverage) {
+        if (
+            typeof newCoverages[filename] === 'undefined' ||
+            oldCoverages[filename].coverage === null ||
+            newCoverages[filename].coverage === oldCoverages[filename].coverage
+        ) {
             continue;
         }
 
-        const oldCoverage = Number(oldCoverages[filename].coverage);
-        const newCoverage = Number(newCoverages[filename].coverage);
+        const oldCoverage = Number(oldCoverages[filename].coverage).valueOf();
+        const newCoverage = Number(newCoverages[filename].coverage).valueOf();
 
         out[newCoverage < oldCoverage ? 'degraded' : 'improved'].push({
             filename,
@@ -381,6 +385,7 @@ const buildDeltaMessage = (oldCoverage, newCoverage) => {
         '| Covered lines | ' + oldCoverage.covered + ' | ' + newCoverage.covered + ' |',
         '',
         '∆ ' + (newCoverage.coverage - oldCoverage.coverage).toFixed(3),
+        '',
         ''
     ].join('\n');
 }
@@ -396,8 +401,6 @@ const buildDetailedDiffTable = (diff) => {
         out.push('| ' + entry.filename + ' | ' + entry.old + ' | ' + entry.new + ' | ');
     }
 
-    out.push('');
-
     return out . join('\n');
 };
 
@@ -409,10 +412,10 @@ const buildDetailedDiffMessage = (detailedDiff) => {
     let out = '';
 
     if (detailedDiff.improved.length > 0) {
-        out += ':green_circle: :arrow_upper_right: Improved files: \n' + buildDetailedDiffTable(detailedDiff.improved);
+        out += ':green_circle: :arrow_upper_right: Improved files: \n' + buildDetailedDiffTable(detailedDiff.improved) + '\n\n';
     }
     if (detailedDiff.degraded.length > 0) {
-        out += ':red_circle: :arrow_lower_right: Degraded files: \n' + buildDetailedDiffTable(detailedDiff.degraded);
+        out += ':red_circle: :arrow_lower_right: Degraded files: \n' + buildDetailedDiffTable(detailedDiff.degraded)  + '\n\n';
     }
 
     return out + '\n';

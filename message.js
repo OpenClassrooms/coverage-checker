@@ -12,6 +12,7 @@ const buildDeltaMessage = (oldCoverage, newCoverage) => {
         '| Covered lines | ' + oldCoverage.covered + ' | ' + newCoverage.covered + ' |',
         '',
         '∆ ' + (newCoverage.coverage - oldCoverage.coverage).toFixed(3),
+        '',
         ''
     ].join('\n');
 }
@@ -27,8 +28,6 @@ const buildDetailedDiffTable = (diff) => {
         out.push('| ' + entry.filename + ' | ' + entry.old + ' | ' + entry.new + ' | ');
     }
 
-    out.push('');
-
     return out . join('\n');
 };
 
@@ -40,10 +39,10 @@ const buildDetailedDiffMessage = (detailedDiff) => {
     let out = '';
 
     if (detailedDiff.improved.length > 0) {
-        out += ':green_circle: :arrow_upper_right: Improved files: \n' + buildDetailedDiffTable(detailedDiff.improved);
+        out += ':green_circle: :arrow_upper_right: Improved files: \n' + buildDetailedDiffTable(detailedDiff.improved) + '\n\n';
     }
     if (detailedDiff.degraded.length > 0) {
-        out += ':red_circle: :arrow_lower_right: Degraded files: \n' + buildDetailedDiffTable(detailedDiff.degraded);
+        out += ':red_circle: :arrow_lower_right: Degraded files: \n' + buildDetailedDiffTable(detailedDiff.degraded)  + '\n\n';
     }
 
     return out + '\n';
