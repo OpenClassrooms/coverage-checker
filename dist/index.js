@@ -10,12 +10,9 @@ __nccwpck_require__.r(__webpack_exports__);
 /* harmony export */   "check": () => (/* binding */ check),
 /* harmony export */   "update": () => (/* binding */ update)
 /* harmony export */ });
-/* harmony import */ var _coverage__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3306);
-
-
 const fs = __nccwpck_require__(5747);
 const { generateBadge } = __nccwpck_require__ (4721);
-const { retrieveBaseCoverage, retrieveBaseDetailedCoverages, retrieveHistory, sumCoverages } = __nccwpck_require__(3306);
+const { compareDetailedCoverages, retrieveBaseCoverage, retrieveBaseDetailedCoverages, retrieveHistory, sumCoverages } = __nccwpck_require__(3306);
 const { clone, push } = __nccwpck_require__(7803);
 const { buildResultMessage, postMessageOnPullRequest } = __nccwpck_require__ (430);
 
@@ -37,7 +34,7 @@ const check = async (coverages, coverageBranch, coverageFiles, reportMessageHead
         newOverallCoverages[summaryFile] = newOverallCoverage;
         baseOverallCoverages[summaryFile] = baseOverallCoverageResult;
 
-        const detailedDiff = (baseDetailedCoverageResult === null) ? null : (0,_coverage__WEBPACK_IMPORTED_MODULE_0__.compareDetailedCoverages)(baseDetailedCoverageResult, coverages[summaryFile].detailed);
+        const detailedDiff = (baseDetailedCoverageResult === null) ? null : compareDetailedCoverages(baseDetailedCoverageResult, coverages[summaryFile].detailed);
 
         messages.push('*' + coverageFiles.find(e => e.summary === summaryFile).label + '* \n\n' + buildResultMessage(baseOverallCoverages[summaryFile], newOverallCoverage, detailedDiff));
     }

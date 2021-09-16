@@ -1,8 +1,6 @@
-import {compareDetailedCoverages} from "./coverage";
-
 const fs = require('fs');
 const { generateBadge } = require ('./badge');
-const { retrieveBaseCoverage, retrieveBaseDetailedCoverages, retrieveHistory, sumCoverages } = require('./coverage');
+const { compareDetailedCoverages, retrieveBaseCoverage, retrieveBaseDetailedCoverages, retrieveHistory, sumCoverages } = require('./coverage');
 const { clone, push } = require('./git');
 const { buildResultMessage, postMessageOnPullRequest } = require ('./message');
 
