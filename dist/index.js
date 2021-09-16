@@ -233,7 +233,7 @@ const extractDetailedCoverages = (json) => {
     const out = {};
 
     for (const fileElement of retrieveDetailedFilesElements(json)) {
-        out[fileElement.attributes.name] = extractCoverageFromMetricsElement(retrieveMetricsElement(fileElement));
+        out[fileElement.attributes.name.replace('/home/runner/work/', '')] = extractCoverageFromMetricsElement(retrieveMetricsElement(fileElement));
     }
 
     return out;
