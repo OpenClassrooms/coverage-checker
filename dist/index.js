@@ -207,11 +207,11 @@ const compareDetailedCoverages = (oldCoverages, newCoverages) => {
         const oldCoverage = Number(oldCoverages[filename].coverage);
         const newCoverage = Number(newCoverages[filename].coverage);
 
-        out[newCoverage < oldCoverage ? 'degraded' : 'improved'] = {
+        out[newCoverage < oldCoverage ? 'degraded' : 'improved'].push({
             filename,
             old: `${oldCoverages[filename].covered} / ${oldCoverages[filename].total} (${oldCoverages[filename].coverage}%)`,
             new: `${newCoverages[filename].covered} / ${newCoverages[filename].total} (${newCoverages[filename].coverage}%)`
-        };
+        });
     }
 
     return out.degraded.length === 0 && out.improved.length === 0 ? null : out;
