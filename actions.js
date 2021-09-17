@@ -1,30 +1,35 @@
 const fs = require('fs');
 const { generateBadge } = require ('./badge');
-const { retrieveBaseCoverage, retrieveHistory, sumCoverages } = require('./coverage');
+const { compareDetailedCoverages, retrieveBaseCoverage, retrieveBaseDetailedCoverages, retrieveHistory, sumCoverages } = require('./coverage');
 const { clone, push } = require('./git');
 const { buildResultMessage, postMessageOnPullRequest } = require ('./message');
 
 const check = async (coverages, coverageBranch, coverageFiles, reportMessageHeader) => {
-    const baseCoverages = {};
+    const baseOverallCoverages = {};
+    const newOverallCoverages = {};
     const messages = [];
 
     for (const summaryFile of Object.keys(coverages)) {
-        const baseCoverageResult = await retrieveBaseCoverage(summaryFile, coverageBranch);
-        const coverage = coverages[summaryFile];
+        const baseOverallCoverageResult = await retrieveBaseCoverage(summaryFile, coverageBranch);
+        const baseDetailedCoverageResult = await retrieveBaseDetailedCoverages(summaryFile, coverageBranch);
+        const newOverallCoverage = coverages[summaryFile].overall;
 
-        if (baseCoverageResult === null) {
-            console.log(`No base coverage ${summaryFile} found. Current coverage is ${coverage.coverage}% (${coverage.total} lines, ${coverage.covered} covered)`);
+        if (baseOverallCoverageResult === null) {
+            console.log(`No base coverage ${summaryFile} found. Current coverage is ${newOverallCoverage.coverage}% (${newOverallCoverage.total} lines, ${newOverallCoverage.covered} covered)`);
             continue;
         }
 
-        baseCoverages[summaryFile] = baseCoverageResult;
+        newOverallCoverages[summaryFile] = newOverallCoverage;
+        baseOverallCoverages[summaryFile] = baseOverallCoverageResult;
 
-        messages.push('*' + coverageFiles.find(e => e.summary === summaryFile).label + '* \n\n' + buildResultMessage(baseCoverages[summaryFile], coverage));
+        const detailedDiff = (baseDetailedCoverageResult === null) ? null : compareDetailedCoverages(baseDetailedCoverageResult, coverages[summaryFile].detailed);
+
+        messages.push('*' + coverageFiles.find(e => e.summary === summaryFile).label + '* \n\n' + buildResultMessage(baseOverallCoverages[summaryFile], newOverallCoverage, detailedDiff));
     }
 
     if (Object.keys(coverages).length > 1) {
-        const globalBaseCoverage = sumCoverages(baseCoverages);
-        const globalCoverage = sumCoverages(coverages);
+        const globalBaseCoverage = sumCoverages(baseOverallCoverages);
+        const globalCoverage = sumCoverages(newOverallCoverages);
 
         messages.push('*Global* \n\n' + buildResultMessage(globalBaseCoverage, globalCoverage));
     }
@@ -41,10 +46,11 @@ const update = async (coverages, coverageBranch, repository, historyFilename, co
         const conf = coverageFiles.find(e => e.summary === summaryFile);
 
         console.log(`Writing ${summaryFile} report (${workingDir}/${summaryFile})`);
-        fs.writeFileSync(`${workingDir}/${summaryFile}`, JSON.stringify(coverages[summaryFile]));
+        fs.writeFileSync(`${workingDir}/${summaryFile}`, JSON.stringify(coverages[summaryFile].overall));
+        fs.writeFileSync(`${workingDir}/detailed-${summaryFile}`, JSON.stringify(coverages[summaryFile].detailed));
 
         if (conf.badge) {
-            await generateBadge(coverages[summaryFile].coverage, conf.label, conf.badge, workingDir);
+            await generateBadge(coverages[summaryFile].overall.coverage, conf.label, conf.badge, workingDir);
         }
 
         if (typeof history[conf.label] === 'undefined') {
@@ -53,7 +59,7 @@ const update = async (coverages, coverageBranch, repository, historyFilename, co
 
         history[conf.label].push({
             time: (new Date()).toISOString(),
-            coverage: coverages[summaryFile].coverage
+            coverage: coverages[summaryFile].overall.coverage
         });
     }
     fs.writeFileSync(`${workingDir}/${historyFilename}`, JSON.stringify(history));
