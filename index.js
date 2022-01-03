@@ -5,7 +5,7 @@ const { fail } = require('./core');
 const { parseCoverages } = require('./coverage');
 
 const ACTION = core.getInput('action');
-const COVERAGE_BRANCH = 'coverage';
+const COVERAGE_BRANCH = core.getInput('coverage-branch');
 const COVERAGE_FILES = JSON.parse(core.getInput('files'));
 const REPO = `https://${process.env.GITHUB_ACTOR}:${core.getInput('token')}@github.com/${process.env.GITHUB_REPOSITORY}.git`;
 const HISTORY_FILENAME = 'coverage-history.json';

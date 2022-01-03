@@ -12,6 +12,10 @@ inputs:
     description: 'Do we want to update the base coverage, or to check it has not been degraded?'
     required: true
     default: 'update'
+  coverage-branch:
+    description: 'Branch to store coverage history'
+    required: false
+    default: 'coverage'
 runs:
   using: 'node12'
   main: 'dist/index.js'
