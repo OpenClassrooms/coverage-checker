@@ -4,9 +4,12 @@ inputs:
   token:
     description: 'The github token'
     required: true
+  directory:
+    description: 'Directory to find coverage files with Clover XML format'
+    required: false
   files:
     description: 'A JSON array of objects representing the coverage files to process, and the summaries to push on the coverage branch'
-    required: true
+    required: false
     default: '[{"coverage": "coverage.xml", "summary": "coverage-summary.json", "label": "Coverage", "badge": "coverage.svg"}]'
   action:
     description: 'Do we want to update the base coverage, or to check it has not been degraded?'
@@ -16,6 +19,10 @@ inputs:
     description: 'Branch to store coverage history'
     required: false
     default: 'coverage'
+  with-average:
+    description: 'Whether we want to calculate the average coverage'
+    required: false
+    default: 'false'
 runs:
-  using: 'node12'
+  using: 'node16'
   main: 'dist/index.js'
