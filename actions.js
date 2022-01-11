@@ -4,7 +4,7 @@ const { compareDetailedCoverages, retrieveBaseCoverage, retrieveBaseDetailedCove
 const { clone, push } = require('./git');
 const { buildResultMessage, postMessageOnPullRequest } = require ('./message');
 
-const check = async (coverages, coverageBranch, coverageFiles, reportMessageHeader) => {
+const check = async (coverages, coverageBranch, coverageFiles, reportMessageHeader, withAverage) => {
     const baseOverallCoverages = {};
     const newOverallCoverages = {};
     const messages = [];
@@ -27,11 +27,11 @@ const check = async (coverages, coverageBranch, coverageFiles, reportMessageHead
         messages.push('*' + coverageFiles.find(e => e.summary === summaryFile).label + '* \n\n' + buildResultMessage(baseOverallCoverages[summaryFile], newOverallCoverage, detailedDiff));
     }
 
-    if (Object.keys(coverages).length > 1) {
-        const globalBaseCoverage = sumCoverages(baseOverallCoverages);
-        const globalCoverage = sumCoverages(newOverallCoverages);
+    if (withAverage && Object.keys(coverages).length > 1) {
+        const averageBaseCoverage = sumCoverages(baseOverallCoverages);
+        const averageCoverage = sumCoverages(newOverallCoverages);
 
-        messages.push('*Global* \n\n' + buildResultMessage(globalBaseCoverage, globalCoverage));
+        messages.push('*Global* \n\n' + buildResultMessage(averageBaseCoverage, averageCoverage));
     }
 
     await postMessageOnPullRequest(messages.join('\n---\n'), reportMessageHeader);
