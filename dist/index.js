@@ -409,10 +409,10 @@ const buildDetailedDiffMessage = (detailedDiff) => {
     let out = '';
 
     if (detailedDiff.improved.length > 0) {
-        out += '<details><summary> :green_circle: :arrow_upper_right: Improved files:</summary> \n' + buildDetailedDiffTable(detailedDiff.improved) + '</details>\n\n';
+        out += '<details>\n<summary> :green_circle: :arrow_upper_right: Improved files:</summary> \n' + buildDetailedDiffTable(detailedDiff.improved) + '\n</details>\n\n';
     }
     if (detailedDiff.degraded.length > 0) {
-        out += '<details><summary> :red_circle: :arrow_lower_right: Degraded files:</summary> \n' + buildDetailedDiffTable(detailedDiff.degraded)  + '</details>\n\n';
+        out += '<details>\n<summary> :red_circle: :arrow_lower_right: Degraded files:</summary> \n' + buildDetailedDiffTable(detailedDiff.degraded)  + '\n</details>\n\n';
     }
 
     return out + '\n';
