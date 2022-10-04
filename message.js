@@ -39,10 +39,10 @@ const buildDetailedDiffMessage = (detailedDiff) => {
     let out = '';
 
     if (detailedDiff.improved.length > 0) {
-        out += ':green_circle: :arrow_upper_right: Improved files: \n' + buildDetailedDiffTable(detailedDiff.improved) + '\n\n';
+        out += '<details>\n<summary> :green_circle: :arrow_upper_right: Improved files:</summary> \n' + buildDetailedDiffTable(detailedDiff.improved) + '\n</details>\n\n';
     }
     if (detailedDiff.degraded.length > 0) {
-        out += ':red_circle: :arrow_lower_right: Degraded files: \n' + buildDetailedDiffTable(detailedDiff.degraded)  + '\n\n';
+        out += '<details>\n<summary> :red_circle: :arrow_lower_right: Degraded files:</summary> \n' + buildDetailedDiffTable(detailedDiff.degraded)  + '\n</details>\n\n';
     }
 
     return out + '\n';
