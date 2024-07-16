@@ -17,7 +17,8 @@ const clone = async (coverageBranch, repository) => {
     } else {
         console.log(`Coverage branch does not exist. Creating it.`);
         await execute(`git checkout --orphan ${coverageBranch}`, { cwd: cloneInto });
-        await execute(`rm -rf .`, { cwd: cloneInto });
+        // Remove all files and directories except .git
+        await execute(`find . -maxdepth 1 ! -name .git ! -name . -exec rm -rf {} +`, { cwd: cloneInto });
     }
 
     return cloneInto;
